@@ -9496,8 +9496,15 @@ void test_formation(TestContext& ctx) {
                 for _, t in __osc_tracks do
                     local p = t.u:GetPosition()
                     if t.last then
-                        local v = math.sqrt((p[1] - t.last[1]) ^ 2 + (p[3] - t.last[3]) ^ 2) * 10
-                        if v > t.top then t.top = v end
+                        -- Its pace over the last ten ticks: a neighbour's push,
+                        -- mostly sideways, adds to one tick's step, not to that.
+                        t.trail = t.trail or {}
+                        table.insert(t.trail, p)
+                        if table.getn(t.trail) > 10 then
+                            local a = table.remove(t.trail, 1)
+                            local v = math.sqrt((p[1] - a[1]) ^ 2 + (p[3] - a[3]) ^ 2)
+                            if v > t.top then t.top = v end
+                        end
                     end
                     t.last = p
                     if t.near then
@@ -9603,8 +9610,8 @@ void test_formation(TestContext& ctx) {
         end
     )");
     lua_check("Test 5: the group keeps its slowest unit's pace (a Lobo's 2.8)", R"(
-        -- Measured from positions, which neighbours' pushes add to: a
-        -- Striker alone would reach 3.4.
+        -- Each unit's pace over a second (ten ticks), which neighbours'
+        -- pushes add little to: a Striker alone would reach 3.4.
         for _, t in __osc_tracks do
             if t.top > 2.8 + 0.25 then error(t.u:GetUnitId() .. ' reached ' .. t.top) end
         end
