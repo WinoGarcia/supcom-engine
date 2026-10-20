@@ -11198,7 +11198,10 @@ void test_range(TestContext& ctx) {
               R"(
         if not __osc_far:IsUnitState('Building') then error('far is not building') end
         local d = __osc_from(__osc_far, 609.5, 110.5)
-        if d < 1.5 or d > 3 then error(string.format('far builds from %.2f', d)) end
+        -- Moho sends it to the cell nearest the site clear of its skirt grown
+        -- by a cell, touching counting (CUnitMobileBuildTask, PrepareMove):
+        -- in retail this one builds from 3.47 (the build reach probe).
+        if d < 2.9 or d > 4 then error(string.format('far builds from %.2f', d)) end
     )");
     lua_check("Test 10: a reclaimer out of reach walks up, and reclaims", R"(
         if not __osc_walker:IsUnitState('Reclaiming') then error('the walker is not reclaiming') end
