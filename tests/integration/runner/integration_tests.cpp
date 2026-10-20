@@ -8983,7 +8983,10 @@ void test_drive(TestContext& ctx) {
         local v = __osc_speeds(__osc_striker)
         local slowing = 0
         for i = 2, table.getn(v) do
-            if v[i] < v[i - 1] - 1e-3 and v[i - 1] - v[i] > 3.4 * 0.1 + 0.02 then
+            -- At its brake while it drives; coasting once there, Moho's
+            -- CalcMoveCommon damps it to 0.8 as well, so a fifth of its
+            -- speed more.
+            if v[i] < v[i - 1] - 1e-3 and v[i - 1] - v[i] > 0.2 * v[i - 1] + 3.4 * 0.1 + 0.02 then
                 error('braked by ' .. (v[i - 1] - v[i]) .. ' in a tick')
             end
         end
