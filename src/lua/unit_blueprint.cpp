@@ -837,14 +837,15 @@ static void read_life_bar(lua_State* L, const BlueprintStore& store, const Bluep
     store.push_lua_table(entry, L);
     const int bp = lua_gettop(L);
     sim::Unit::LifeBar bar;
-    const auto number = [&](const char* key) {
+    const auto number = [&](const char* key, f32 fallback = 0.0f) {
         lua_pushstring(L, key);
         lua_rawget(L, bp);
-        const f32 v = lua_type(L, -1) == LUA_TNUMBER ? static_cast<f32>(lua_tonumber(L, -1)) : 0.0f;
+        const f32 v =
+            lua_type(L, -1) == LUA_TNUMBER ? static_cast<f32>(lua_tonumber(L, -1)) : fallback;
         lua_pop(L, 1);
         return v;
     };
-    bar.size = number("LifeBarSize");
+    bar.size = number("LifeBarSize", 1.0f); // Moho's default (retail's /synclog beat 0)
     bar.height = number("LifeBarHeight");
     bar.offset = number("LifeBarOffset");
     lua_pushstring(L, "LifeBarRender");

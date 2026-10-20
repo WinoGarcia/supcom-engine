@@ -277,6 +277,12 @@ TEST_CASE("A unit without BackUpDistance backs up within three times its length"
     CHECK(std::abs(w.make(40.0f, 40.0f)->drive().backup_distance - 16.2f) < 1e-4f);
 }
 
+TEST_CASE("A unit without LifeBarSize has Moho's 1", "[blueprint-defaults]") {
+    MohoSea w;
+    // retail's /synclog beat 0: the 12 units that leave it out hold 1.
+    CHECK(w.make(40.0f, 40.0f)->life_bar().size == 1.0f);
+}
+
 TEST_CASE("FAF's Unit:ForceAltFootprint sets and clears the forced alt footprint",
           "[favorswater]") {
     MohoSea w;
