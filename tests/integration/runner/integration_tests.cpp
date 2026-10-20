@@ -8953,12 +8953,14 @@ void test_drive(TestContext& ctx) {
     run(120);
     lua_check("Test 2: it turns round on the spot before it drives", R"(
         local s = __osc_striker.samples
-        -- While the goal is more than 45 degrees off its heading it pivots.
+        -- From rest it pivots till the goal is within acos 0.98 (11.5
+        -- degrees) of its heading (Moho's steering speed cap); in retail a
+        -- Striker turning back drives from 1 degree off.
         for i = 1, table.getn(s) do
             local off = __osc_turned(s[i][3], math.pi)
-            if off > math.rad(50) then
+            if off > math.rad(12) then
                 local moved = math.sqrt((s[i][1] - 620) ^ 2 + (s[i][2] - 100) ^ 2)
-                if moved > 0.3 then error('it moved ' .. moved .. ' before turning, at tick ' .. i) end
+                if moved > 0.05 then error('it moved ' .. moved .. ' before turning, at tick ' .. i) end
             end
         end
         if __osc_turned(s[table.getn(s)][3], math.pi) > math.rad(3) then error('it never faced the goal') end
@@ -8989,6 +8991,22 @@ void test_drive(TestContext& ctx) {
             if v[i] < v[i - 1] - 1e-3 and v[i - 1] - v[i] > 0.2 * v[i - 1] + 3.4 * 0.1 + 0.02 then
                 error('braked by ' .. (v[i - 1] - v[i]) .. ' in a tick')
             end
+        end
+        -- With Moho's pathing the move ends in the goal's cell while it still
+        -- goes, and it coasts: each tick 0.8 of its speed less its brake
+        -- (retail's Striker: 2.04, 1.29, 0.69, 0.21, then still).
+        if __osc_moho_pathing then
+            local coasted = 0
+            for i = 2, table.getn(v) do
+                if v[i - 1] > 3.4 * 0.1 and v[i - 1] - v[i] > 3.4 * 0.1 + 0.03 then
+                    local want = 0.8 * v[i - 1] - 3.4 * 0.1
+                    if math.abs(v[i] - want) > 0.03 then
+                        error(string.format('coasted from %.3f to %.3f, not %.3f', v[i - 1], v[i], want))
+                    end
+                    coasted = coasted + 1
+                end
+            end
+            if coasted == 0 then error('it never coasted') end
         end
     )");
     lua_check("Test 5: its motion events come in order", R"(
