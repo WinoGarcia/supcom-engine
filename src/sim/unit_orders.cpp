@@ -2998,6 +2998,7 @@ OrderStep Unit::order_teleport(UnitCommand& cmd, lua_State* L) {
             set_position(to);
             note_snap();
             place_now();
+            ground_speed_ = 0; // a warp leaves nothing to coast on (Unit::warp)
             command_queue_.pop_front();
             return OrderStep::Next;
         }

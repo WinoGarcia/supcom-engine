@@ -2863,6 +2863,8 @@ void Unit::warp(const map::Terrain* terrain, const Vector3& at) {
     set_position(p);
     note_snap(); // a jump, not drawn sliding there
     place_now();
+    // CUnitMotion::Warp advances its coords twice: no velocity is left to coast on.
+    ground_speed_ = 0;
     reset_lift_ground();
     // CUnitMotion::Warp's target is where it now is, and the navigator's
     // move is aborted: AINAVEVENT_Aborted reaches the task listening, the
