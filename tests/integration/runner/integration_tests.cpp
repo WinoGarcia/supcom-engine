@@ -9027,6 +9027,11 @@ void test_drive(TestContext& ctx) {
         -- BackUpDistance of 4.
         __osc_pivoter = __osc_track(__osc_spawn('url0111', 'ARMY_1', 680, 116, 0))
         IssueMove({__osc_pivoter.u}, {680, GetTerrainHeight(680, 113), 113})
+        -- A Striker facing -z with its goal dead behind it, on its own line (cell
+        -- centres, so Moho pathing's goal cell is dead behind too), its heading a
+        -- hair under pi, as a turn leaves one.
+        __osc_about = __osc_track(__osc_spawn('uel0201', 'ARMY_1', 640.5, 100.5, math.pi - 5e-5))
+        IssueMove({__osc_about.u}, {640.5, GetTerrainHeight(640.5, 110.5), 110.5})
     )");
     run(100);
     lua_check("Test 6: a Fatboy backs up to a goal just behind it", R"(
@@ -9058,6 +9063,21 @@ void test_drive(TestContext& ctx) {
         local s = __osc_pivoter.samples
         local last = s[table.getn(s)]
         if math.abs(last[2] - 113) > 1.0 then error('it ended at z ' .. last[2] .. ', 113 its goal') end
+    )");
+    lua_check("Test 7c: a goal dead behind, it turns the positive way round", R"(
+        -- Moho's RotateDirectionTowardTargetLimited (0x006992C0) turns by the
+        -- cross product's sign, positive on a tie; retail's Strikers in
+        -- tools/moho_probes/drivegrid go 180, -171, -162 ... degrees.
+        local s = __osc_about.samples
+        local h0 = s[1][3]
+        for i = 2, table.getn(s) do
+            local d = math.mod(s[i][3] - h0 + 3 * math.pi, 2 * math.pi) - math.pi
+            if math.abs(d) > 1e-3 then
+                if d < 0 then error('it turned the negative way, ' .. math.deg(d) .. ' degrees') end
+                return
+            end
+        end
+        error('it never turned')
     )");
 
     // SetImmobile holds it; GetCurrentMoveLocation is where it is going.
