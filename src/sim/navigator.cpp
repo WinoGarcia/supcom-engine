@@ -448,6 +448,9 @@ bool Navigator::drive(Unit& unit, f32 max_speed, f64 dt, const map::Terrain* ter
     }
     // Forward, or backing up to a goal close behind.
     f32 err = dist > 1e-4f ? wrap_angle(osc::dmath::atan2(dx, dz) - heading) : 0.0f;
+    // Dead behind it turns the positive way, as Moho's RotateDirectionTowardTargetLimited
+    // (0x006992C0) does on a zero cross product.
+    if (std::abs(err) > kPi - 1e-4f) err = kPi;
     // Moho caps the speed from the heading the unit has before this tick's turn.
     const f32 err_before_turn = err;
     const f32 brake = (d.max_brake > 0 ? d.max_brake : d.max_accel) * unit.accel_mult();
