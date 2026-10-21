@@ -497,6 +497,8 @@ bool Navigator::drive(Unit& unit, f32 max_speed, f64 dt, const map::Terrain* ter
     const bool reverse = final && d.max_speed_reverse > 0 && std::abs(err) > REVERSE_ANGLE &&
                          to_goal <= d.backup_distance;
     if (reverse) err = wrap_angle(err + kPi);
+    // The cap reads the way it goes: backing up, its tail's.
+    const f32 cap_err = reverse ? wrap_angle(err_before_turn + kPi) : err_before_turn;
 
     // Turn: at its TurnRate, faster at speed where its TurnRadius allows.
     f32 omega = d.turn_rate * unit.turn_mult();
@@ -525,9 +527,9 @@ bool Navigator::drive(Unit& unit, f32 max_speed, f64 dt, const map::Terrain* ter
     f32 target = top;
     const f32 ratio = max_speed > 0 ? std::abs(speed) / max_speed : 0.0f;
     if (d.rotate_on_spot && d.rotate_threshold > ratio) {
-        target = osc::dmath::cos(err_before_turn) >= 0.98f ? top : 0.0f;
+        target = osc::dmath::cos(cap_err) >= 0.98f ? top : 0.0f;
     } else {
-        const f32 side = std::abs(osc::dmath::sin(err_before_turn));
+        const f32 side = std::abs(osc::dmath::sin(cap_err));
         const f32 circle = side > 0 ? dist / (2.0f * side) : 0.0f;
         const f32 radius = d.turn_radius > 0 ? d.turn_radius / unit.turn_mult()
                                              : std::numeric_limits<f32>::infinity();

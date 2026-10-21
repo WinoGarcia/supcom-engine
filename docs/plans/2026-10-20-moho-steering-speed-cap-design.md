@@ -59,7 +59,10 @@ After a move retail's Striker coasts 2.04, 1.29, 0.69, 0.21 a second, then stand
 
 - **EN `sim/navigator.cpp` `Navigator::drive`** asked for `top * cos(error)`, at least 30% of top for a
   unit that can't pivot, and pivoted a unit that can only past 45 degrees. It now takes rule 1, from
-  the heading before the tick's turn; the old `PIVOT_ANGLE` and `TURNING_SPEED` go.
+  the heading before the tick's turn; the old `PIVOT_ANGLE` and `TURNING_SPEED` go. Backing up, the
+  cap reads the error from its tail, the way it goes: from its nose a goal just behind is 180 degrees
+  off, which held a pivoting unit still (`tools/moho_probes/drivegrid`: Cybran, Aeon and Seraphim
+  T1 mobile artillery stood with their orders until the navigator gave up; retail's get there).
 - **EN `sim/unit.cpp` `Unit::coast`** braked at `MaxBrake` alone; it now takes rule 2, signed so the
   last fifth goes backward.
 - **EN `sim/unit.cpp` `Unit::warp`** and the Teleport order's own jump kept the unit's speed, so it

@@ -9023,6 +9023,10 @@ void test_drive(TestContext& ctx) {
         __osc_mantis = __osc_track(__osc_spawn('url0107', 'ARMY_1', 700, 80, 0))
         __osc_mantis_goal = {712, GetTerrainHeight(712, 80), 80}
         IssueMove({__osc_mantis.u}, __osc_mantis_goal)
+        -- A pivoting unit (RotateOnSpot) with a goal 3 behind it, inside its
+        -- BackUpDistance of 4.
+        __osc_pivoter = __osc_track(__osc_spawn('url0111', 'ARMY_1', 680, 116, 0))
+        IssueMove({__osc_pivoter.u}, {680, GetTerrainHeight(680, 113), 113})
     )");
     run(100);
     lua_check("Test 6: a Fatboy backs up to a goal just behind it", R"(
@@ -9047,6 +9051,13 @@ void test_drive(TestContext& ctx) {
         local miss = math.sqrt((last[1] - __osc_mantis_goal[1]) ^ 2 + (last[2] - __osc_mantis_goal[3]) ^ 2)
         -- In its goal's cell with Moho's pathing (Test 4).
         if miss > (__osc_moho_pathing and 0.75 or 0.5) then error('it ended ' .. miss .. ' from its goal') end
+    )");
+    lua_check("Test 7b: a pivoting unit gets to a goal just behind it", R"(
+        -- Retail's (tools/moho_probes/drivegrid) gets there, 0.85 off; the
+        -- speed cap had read its heading, not its way back, and held it still.
+        local s = __osc_pivoter.samples
+        local last = s[table.getn(s)]
+        if math.abs(last[2] - 113) > 1.0 then error('it ended at z ' .. last[2] .. ', 113 its goal') end
     )");
 
     // SetImmobile holds it; GetCurrentMoveLocation is where it is going.
