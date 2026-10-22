@@ -9020,7 +9020,13 @@ void test_drive(TestContext& ctx) {
         __osc_hop = __osc_track(__osc_spawn('uel0201', 'ARMY_1', 600.5, 90.5, 0))
         IssueMove({__osc_hop.u}, {600.5, GetTerrainHeight(600.5, 92.5), 92.5})
     )");
-    run(41);
+    run(1);
+    lua_check("Test 5b: it is Moving the tick after its order", R"(
+        -- Moho's move task sets UNITSTATE_Moving as it starts, before its path
+        -- (CUnitMoveTask, 0x006180E0); retail's units are Moving at tick 1.
+        if not __osc_hop.u:IsUnitState('Moving') then error('not Moving') end
+    )");
+    run(40);
     lua_check("Test 5c: on a short hop it brakes at Moho's stopping speed", R"(
         -- CAiPathSpline::Generate caps a node at sqrt(2 d brake) from where it
         -- is, not a tick ahead: 2.67 on a hop of 2, where a tick ahead gave
