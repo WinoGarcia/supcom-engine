@@ -26,6 +26,8 @@ enum class PathType : u8 {
     Normal = 0,   ///< PT_0: it stops on its destination
     TopSpeed = 1, ///< PT_1: it drives through at top speed (IAiSteering::UseTopSpeed)
     Sidestep = 2, ///< PT_2: stepping aside, at twice its acceleration, brake and turn
+    Settle = 3,   ///< PT_3: braking to a stop (CAiPathSpline::Update mode 3)
+    Brake = 4,    ///< PT_4: braking at twice its brake, for a unit in its way (mode 4)
 };
 
 /// What Moho's spline reads of a unit (its blueprint's Physics, its size and its
@@ -91,6 +93,9 @@ public:
 
     /// The node to stand on this tick, the spline moved on past it; none past its end.
     const Node* advance();
+    /// CAiPathSpline::Update (0x005B26A0): brake to a stop where the unit goes
+    /// (mode 4 at twice its brake, and five still nodes on; mode 3 at its brake).
+    void brake(const SplineUnit& unit, const Pose& pose, int mode, const SplineWorld& world);
     /// At its last node: the steering generates again (ProcessSplineMovement).
     bool at_end() const { return current_ + 1 >= nodes_.size(); }
     bool empty() const { return current_ >= nodes_.size(); }

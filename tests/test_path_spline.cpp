@@ -137,3 +137,23 @@ TEST_CASE("A spline holds 20 nodes and carries on from its continuation", "[spli
     CHECK(std::fabs(s.nodes()[0].position.z - last.z) < 1e-5f);
     CHECK(s.nodes()[0].position.z > before.z);
 }
+
+TEST_CASE("A mode 4 spline brakes at twice its brake and ends past its sixth node", "[spline]") {
+    // CAiPathSpline::Update: a Striker going 3.4 forward, told to hold for a unit crossing.
+    SplineUnit u;
+    u.max_speed = 3.4f;
+    u.max_accel = 3.4f;
+    u.max_brake = 3.4f;
+    u.turn_rate = 90;
+    u.top_speed = 3.4f;
+    Pose pose;
+    pose.velocity = {0, 0, 0.34f};
+    Spline s;
+    s.brake(u, pose, 4, SplineWorld{});
+    const auto& n = s.nodes();
+    // Steps of 0.34 less 0.068 a tick: 0.272, 0.204, 0.136, 0.068, then still; it ends on
+    // the still node pushed once it has more than five (the count is taken before the push).
+    REQUIRE(n.size() == 7);
+    const std::vector<f32> want{0.272f, 0.476f, 0.612f, 0.680f, 0.680f, 0.680f, 0.680f};
+    for (size_t i = 0; i < want.size(); ++i) CHECK(std::fabs(n[i].position.z - want[i]) < 1e-5f);
+}

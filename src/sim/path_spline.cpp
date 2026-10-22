@@ -142,6 +142,61 @@ void rotate_toward(f32 max_turn, f32 source_x, f32 source_z, f32 target_x, f32 t
     out_x = cx * source_x - cz * source_z;
 }
 
+void Spline::brake(const SplineUnit& u, const Pose& pose, int mode, const SplineWorld& world) {
+    nodes_.clear();
+    type_ = static_cast<PathType>(mode);
+    current_ = 0;
+    const Vector3 forward = pose.forward;
+    Vector3 position = pose.position;
+    const Vector3& v = pose.velocity;
+    const f32 speed = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    // Its momentum along its facing, braked; backing, against it.
+    Vector3 step = with_length(forward, speed);
+    constexpr f32 kMax = std::numeric_limits<f32>::max();
+    Vector3 travel{kMax, kMax, kMax};
+    if (speed != 0) travel = {v.x / speed, v.y / speed, v.z / speed};
+    if (travel.y * forward.y + travel.z * forward.z + travel.x * forward.x < 0)
+        step = {-step.x, -step.y, -step.z};
+    bool done = false;
+    while (!done) {
+        cont_position_ = position;
+        cont_direction_ = forward;
+        cont_velocity_ = step;
+        cont_state_ = PointState::None;
+        const Vector3 target{position.x + travel.x, position.y + travel.y, position.z + travel.z};
+        Params p = params_for(u, position, target, travel, u.top_speed);
+        if (mode == 4) {
+            p.max_accel *= 2.0f;
+            p.max_brake *= 2.0f;
+        }
+        const f32 px = step.x;
+        const f32 pz = -step.z;
+        f32 bx = -step.x;
+        f32 bz = step.z;
+        f32 speed_sq = pz * pz + px * px;
+        if (speed_sq > 0) {
+            const f32 limit = bz * pz + bx * px <= 0 ? p.max_brake : p.max_accel;
+            const f32 brake_sq = bz * bz + bx * bx;
+            if (brake_sq > limit * limit) scale_to(bx, bz, brake_sq, limit);
+            f32 nx = bx + px;
+            f32 nz = bz + pz;
+            const f32 new_sq = nz * nz + nx * nx;
+            if (new_sq > p.max_speed * p.max_speed) scale_to(nx, nz, new_sq, p.max_speed);
+            if (nz * nz + nx * nx <= 1.0e-6f) {
+                step = {};
+                speed_sq = 0;
+            } else {
+                position.x = nx + position.x;
+                position.z = -nz + position.z;
+                step = {nx, 0, -nz};
+            }
+        }
+        done = speed_sq <= 1.0e-6f && (mode == 3 || (mode == 4 && nodes_.size() > 5));
+        if (world.height) position.y = world.height(position.x, position.z);
+        nodes_.push_back({position, forward});
+    }
+}
+
 void Spline::clear() {
     nodes_.clear();
     current_ = 0;

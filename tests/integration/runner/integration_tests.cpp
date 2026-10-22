@@ -9063,9 +9063,8 @@ void test_drive(TestContext& ctx) {
         __osc_pivoter = __osc_track(__osc_spawn('url0111', 'ARMY_1', 680, 116, 0))
         IssueMove({__osc_pivoter.u}, {680, GetTerrainHeight(680, 113), 113})
         -- A Striker facing -z with its goal dead behind it, on its own line (cell
-        -- centres, so Moho pathing's goal cell is dead behind too), its heading a
-        -- hair under pi, as a turn leaves one.
-        __osc_about = __osc_track(__osc_spawn('uel0201', 'ARMY_1', 640.5, 100.5, math.pi - 5e-5))
+        -- centres, so Moho pathing's goal cell is dead behind too), facing pi.
+        __osc_about = __osc_track(__osc_spawn('uel0201', 'ARMY_1', 640.5, 100.5, math.pi))
         IssueMove({__osc_about.u}, {640.5, GetTerrainHeight(640.5, 110.5), 110.5})
         -- A scout that backs up and doesn't pivot (uel0101), sent 30 behind.
         __osc_backer = __osc_track(__osc_spawn('uel0101', 'ARMY_1', 620.5, 100.5, 0))

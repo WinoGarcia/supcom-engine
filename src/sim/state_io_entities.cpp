@@ -526,6 +526,17 @@ void StateIO::save(StateWriter& w, const Navigator& n) {
     w.str(n.moho_layer_);
     w.f32v(n.moho_draft_);
     w.b(n.moho_amphibious_);
+    save(w, n.spline_);
+    w.b(n.has_spline_);
+    w.b(n.waypoint_refresh_);
+    w.vec3(n.steer_dest_);
+    w.b(n.steer_dest_set_);
+    w.vec3(n.avoid_target_);
+    w.vec3(n.motion_node_.position);
+    w.vec3(n.motion_node_.direction);
+    w.b(n.motion_node_set_);
+    w.u8v(n.collision_.type);
+    w.b(n.steer_paused_);
 }
 
 void StateIO::load(StateReader& r, Navigator& n, SimState& sim, i32 army) {
@@ -566,6 +577,17 @@ void StateIO::load(StateReader& r, Navigator& n, SimState& sim, i32 army) {
     n.moho_layer_ = r.str();
     n.moho_draft_ = r.f32v();
     n.moho_amphibious_ = r.b();
+    load(r, n.spline_);
+    n.has_spline_ = r.b();
+    n.waypoint_refresh_ = r.b();
+    n.steer_dest_ = r.vec3();
+    n.steer_dest_set_ = r.b();
+    n.avoid_target_ = r.vec3();
+    n.motion_node_.position = r.vec3();
+    n.motion_node_.direction = r.vec3();
+    n.motion_node_set_ = r.b();
+    n.collision_.type = r.u8v();
+    n.steer_paused_ = r.b();
 }
 
 // ------------------------------------------------------ Category rules
@@ -1215,6 +1237,7 @@ void StateIO::save(StateWriter& w, const Unit& u) {
     w.f32v(d.max_speed_reverse);
     w.f32v(d.backup_distance);
     w.f32v(d.turn_facing_rate);
+    w.f32v(d.max_steer_force);
     const Unit::LifeBar& bar = u.life_bar_;
     w.f32v(bar.size);
     w.f32v(bar.height);
@@ -1627,6 +1650,7 @@ void StateIO::load(StateReader& r, Unit& u, SimState& sim) {
     d.max_speed_reverse = r.f32v();
     d.backup_distance = r.f32v();
     d.turn_facing_rate = r.f32v();
+    d.max_steer_force = r.f32v();
     Unit::LifeBar& bar = u.life_bar_;
     bar.size = r.f32v();
     bar.height = r.f32v();

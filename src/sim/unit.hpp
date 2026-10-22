@@ -501,6 +501,8 @@ public:
         /// TurnFacingRate, radians per second: how fast a hover's body turns
         /// to its work (none without one, as Moho's)
         f32 turn_facing_rate = 0;
+        /// MaxSteerForce: the slide across its heading it keeps (0: MaxAcceleration)
+        f32 max_steer_force = 0;
     };
     const Drive& drive() const { return drive_; }
     void set_drive(const Drive& d) { drive_ = d; }
@@ -872,6 +874,9 @@ public:
     f32 speed_mult() const { return speed_mult_; }
     void set_speed_mult(f32 m) { speed_mult_ = m; }
     f32 effective_speed() const { return max_speed_ * speed_mult_; }
+    /// The speed it was last told to drive at: its own, or its formation's (Moho's
+    /// mInfoCache.mFormationTopSpeed); its own before it is told.
+    f32 nav_speed() const { return nav_speed_ > 0 ? nav_speed_ : effective_speed(); }
 
     // Movement multipliers
     f32 accel_mult() const { return accel_mult_; }
