@@ -181,9 +181,10 @@ private:
     int hold_ticks_ = 0;        ///< stopping, then this many ticks still
     u32 held_for_ = 0;          ///< the unit it stops for
 
-    /// Moho's spline states for a unit that backs up and doesn't rotate on the
-    /// spot (faf-re CAiPathSpline::Generate's PPS_7, PPS_4, PPS_5 and PPS_6).
-    enum class Gear : u8 { Forward, BrakeForward, Reverse, BrakeReverse };
+    /// Moho's spline states (faf-re CAiPathSpline::Generate's PPS_7, PPS_4, PPS_5,
+    /// PPS_6 and PPS_3): backing up, for a unit that doesn't rotate on the spot,
+    /// and braking to stop on its goal.
+    enum class Gear : u8 { Forward, BrakeForward, Reverse, BrakeReverse, Stop };
     Gear gear_ = Gear::Forward;
     bool backup_ = false; ///< reversing tail first to a goal close behind (doBackup)
     /// The waypoint its gear was chosen for; a new one, or a new move, chooses again.

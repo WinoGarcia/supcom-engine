@@ -9015,6 +9015,21 @@ void test_drive(TestContext& ctx) {
         if got ~= want then error(got) end
     )");
 
+    // A Striker sent two cells ahead.
+    lua_check("setup: a short hop", R"(
+        __osc_hop = __osc_track(__osc_spawn('uel0201', 'ARMY_1', 600.5, 90.5, 0))
+        IssueMove({__osc_hop.u}, {600.5, GetTerrainHeight(600.5, 92.5), 92.5})
+    )");
+    run(41);
+    lua_check("Test 5c: on a short hop it brakes at Moho's stopping speed", R"(
+        -- CAiPathSpline::Generate caps a node at sqrt(2 d brake) from where it
+        -- is, not a tick ahead: 2.67 on a hop of 2, where a tick ahead gave
+        -- 2.38. Retail's Striker on a hop of 1.85 (drivegrid) peaks at 2.48.
+        local top = 0
+        for _, v in ipairs(__osc_speeds(__osc_hop)) do top = math.max(top, v) end
+        if top < 2.55 then error('it peaked at ' .. top) end
+    )");
+
     // A Fatboy backs up to a goal just behind it; a Mantis (no pivoting)
     // turns as it drives.
     lua_check("setup: backing up and turning on the move", R"(
