@@ -311,7 +311,8 @@ void Navigator::navigate(Unit& unit) {
         // coasts to a stop at its brake (Unit::coast), not dead in a tick.
         if (sim_->steer_log())
             *sim_->steer_log() << "STEER t=" << sim_->tick_count() << ' ' << unit.blueprint_id()
-                               << " waypoints none\n";
+                               << " waypoints none #" << EntityRegistry::moho_id(unit.entity_id())
+                               << '\n';
         reset_moho();
         arrive();
         ended_ = true;
@@ -324,7 +325,7 @@ void Navigator::navigate(Unit& unit) {
         if (target != moho_waypoint_cell_ && sim_->steer_log()) {
             *sim_->steer_log() << "STEER t=" << sim_->tick_count() << ' ' << unit.blueprint_id()
                                << " waypoints " << moho_.target_x() << ',' << moho_.target_z()
-                               << '\n';
+                               << " #" << EntityRegistry::moho_id(unit.entity_id()) << '\n';
         }
         moho_waypoint_cell_ = target;
         // CAiSteeringImpl::DriveToNextWaypoint: a waypoint the unit is at (Unit::IsAtPosition)

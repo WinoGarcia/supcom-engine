@@ -24,7 +24,7 @@ NAV_FOR = re.compile(r"in UpdateCurrentPosition\(\) for (0x[0-9a-f]{8})")
 CURRENT = re.compile(r"currentpos=<(\S+),(\S+)>")
 WAYPOINTS = re.compile(r"(0x[0-9a-f]{8})->SetWaypoints\((\d+)(?:, <(\S+),(\S+)>)?")
 RESOLVE = re.compile(r"ResolvePossibleCollision\((0x[0-9a-f]{8}) @ .*?, (0x[0-9a-f]{8}) @")
-ENGINE = re.compile(r"STEER t=(\d+) (\w+) (.*)$")
+ENGINE = re.compile(r"STEER t=(\d+) (\w+) (.*?)(?: #\d+)?$")
 
 Event = tuple[int, str]  # (ticks from the batch's start, what)
 

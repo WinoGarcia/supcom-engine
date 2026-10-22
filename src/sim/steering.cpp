@@ -315,7 +315,8 @@ bool place(SimState& sim, const Unit& u, Vector3& p) {
 /// A line of the steering log (SimState::set_steer_log).
 void steer_log(const SimState& sim, const Unit& u, const char* what) {
     if (std::ostream* out = sim.steer_log())
-        *out << "STEER t=" << sim.tick_count() << ' ' << u.blueprint_id() << ' ' << what << '\n';
+        *out << "STEER t=" << sim.tick_count() << ' ' << u.blueprint_id() << ' ' << what << " #"
+             << EntityRegistry::moho_id(u.entity_id()) << '\n';
 }
 
 // ---- Moho pathing: CAiSteeringImpl on the unit's spline ----
