@@ -9345,7 +9345,9 @@ void test_steer(TestContext& ctx) {
         const Watch w = watch("__osc_fast", "__osc_slow", 300, false, false);
         auto* fast = unit("__osc_fast");
         auto* slow = unit("__osc_slow");
-        check(w.stepped[0] && w.closest >= 0.9f * r && fast && slow &&
+        // With Moho pathing the pass is its navigator's, the target cell moved aside (the cone
+        // probe's overtakings match retail's tick for tick), not a steering sidestep.
+        check((moho || w.stepped[0]) && w.closest >= 0.9f * r && fast && slow &&
                   fast->position().z > slow->position().z && w.arrived[0] && w.arrived[1],
               fmt::format("Test 1: overtaking, the faster steps aside and passes (stepped {}, "
                           "closest {:.2f} of {:.2f}, strayed {:.2f})",
@@ -9448,7 +9450,8 @@ void test_steer(TestContext& ctx) {
         const Watch w = watch("__osc_striker", "__osc_pillar", 300, false, false);
         auto* striker = unit("__osc_striker");
         auto* pillar = unit("__osc_pillar");
-        check(w.stepped[0] && w.held[1] && w.closest >= 0.9f * r && striker && pillar &&
+        // With Moho pathing the pass is its navigator's (see test 1): nothing is made to stop.
+        check((moho || (w.stepped[0] && w.held[1])) && w.closest >= 0.9f * r && striker && pillar &&
                   striker->position().z > pillar->position().z && w.arrived[0] && w.arrived[1],
               fmt::format("Test 5: overtaking one that outranks it, it steps aside and the other "
                           "stops (stepped {}, overtaken held {}, closest {:.2f} of {:.2f})",

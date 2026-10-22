@@ -425,10 +425,9 @@ void resolve_moho(SimState& sim, Unit& owner) {
     const bool formation = same_formation_layer(owner, other);
     const V2 away = normalized({owner_live.x - other_live.x, owner_live.z - other_live.z});
     const V2 heading = normalized(other_vel);
-    // shortcut: retail overtakes by its path navigator moving the target cell aside, which
-    // the engine lacks; until it does, one ahead going its way is stepped round, as before.
-    const bool overtaking = dot(away, heading) < -kCone;
-    if (!(dot(away, heading) > kCone) && !overtaking) {
+    // Not within the cone, one ahead going its way among them, it brakes: retail's
+    // overtaking is its path navigator's, which moves the target cell aside before.
+    if (!(dot(away, heading) > kCone)) {
         steer_log(sim, owner, "hold");
         set(4, owner.position());
         return;
@@ -450,17 +449,7 @@ void resolve_moho(SimState& sim, Unit& owner) {
     }
     V2 base = owner_at;
     V2 dir;
-    if (overtaking) {
-        V2 own = !zero(owner_vel) ? normalized(owner_vel) : forward(owner);
-        V2 lane = heading;
-        if (!zero(owner_vel) && dot(own, heading) > kCone)
-            lane = normalized({heading.x + own.x, heading.z + own.z});
-        const V2 to_other{-away.x, -away.z};
-        V2 lateral = normalized({-lane.z, lane.x});
-        if (to_other.x * lane.z - to_other.z * lane.x > 0) lateral = {-lateral.x, -lateral.z};
-        if (formation) lateral = {-lateral.x, -lateral.z};
-        dir = normalized({lane.x + lateral.x, lane.z + lateral.z});
-    } else if (!zero(owner_vel) && dot(away, forward(owner)) < 0) {
+    if (!zero(owner_vel) && dot(away, forward(owner)) < 0) {
         const V2 own = normalized(owner_vel);
         const V2 of = forward(other);
         V2 side{of.z, -of.x};
