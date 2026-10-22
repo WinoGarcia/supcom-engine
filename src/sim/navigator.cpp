@@ -2,6 +2,7 @@
 #include "core/dmath.hpp"
 #include "sim/air_combat.hpp"
 #include "sim/army_brain.hpp"
+#include "sim/entity_registry.hpp"
 #include "sim/path_tables.hpp"
 #include "sim/prepare_move.hpp"
 #include "sim/sim_state.hpp"
@@ -290,7 +291,7 @@ void Navigator::navigate(Unit& unit) {
     nav.waiting_for_transport = !unit.command_queue().empty() &&
                                 unit.command_queue().front().type == CommandType::TransportLoad;
     nav.tick = sim_->tick_count();
-    nav.probe_bucket = unit.entity_id() % 7;
+    nav.probe_bucket = EntityRegistry::moho_id(unit.entity_id()) % 7;
     nav.max_speed = unit.max_speed();
     // TurnRadius against TurnRate in its blueprint's units, degrees a second.
     constexpr f32 kRadToDeg = 180.0f / 3.14159265358979f;

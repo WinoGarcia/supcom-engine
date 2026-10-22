@@ -46,6 +46,7 @@ extern "C" {
 #include <cctype>
 #include <cstring>
 #include <map>
+#include <unordered_set>
 #include <optional>
 #include <utility>
 #include <variant>
@@ -2297,19 +2298,18 @@ void SimState::tick_unit_orders() {
     PROFILE_ZONE("Sim::orders");
     SimContext ctx = sim_context();
     std::vector<u32> ids;
-    u32 done = 0;
+    std::unordered_set<u32> done; // looked up only
     // CTaskStage::UserFrame runs its list to the end: a unit made during the stage runs in it too.
     while (true) {
         ids.clear();
         entity_registry_.for_each_unit([&](Entity& e) {
-            if (e.entity_id() > done) {
+            if (done.insert(e.entity_id()).second) {
                 ids.push_back(e.entity_id());
             }
         });
         if (ids.empty()) {
             break;
         }
-        done = ids.back();
         for (const u32 id : ids) {
             Entity* e = entity_registry_.find(id);
             if (e && !e->destroyed() && e->is_unit()) {

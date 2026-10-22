@@ -542,7 +542,8 @@ void Unit::begin_dying() {
     if (is_air_unit()) {
         crashing_ = true;
         crash_velocity_y_ = 0;
-        crash_spin_rate_ = (static_cast<f32>(entity_id() % 100) / 100.0f - 0.5f) * 4.0f;
+        crash_spin_rate_ =
+            (static_cast<f32>(EntityRegistry::moho_id(entity_id()) % 100) / 100.0f - 0.5f) * 4.0f;
     }
 }
 
