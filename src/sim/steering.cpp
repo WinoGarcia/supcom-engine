@@ -203,8 +203,10 @@ void predict(Unit& rec, const std::vector<Vector3>& rec_path, const Unit& other,
     const bool ignore_braking = same_formation_layer(rec, other);
     V2 rec_at{rec.position().x, rec.position().z};
     V2 other_at{other.position().x, other.position().z};
-    V2 rec_vel{rec.velocity().x, rec.velocity().z};
-    V2 other_vel{other.velocity().x, other.velocity().z};
+    // A unit with no path keeps a velocity of zero throughout (retail 0x00597800 reads one only
+    // from a path: the unit's own at its first node, then its steps).
+    V2 rec_vel{};
+    V2 other_vel{};
     // Past the first node, a unit on Moho's spline has for velocity its step since the node
     // three back, read as one tick's (retail 0x0059E2D0 subtracts the nodes and
     // UnitsWillCollide scales by 10): three times its speed, so its braking lead is nine
@@ -219,14 +221,16 @@ void predict(Unit& rec, const std::vector<Vector3>& rec_path, const Unit& other,
         if (!rec_path.empty()) {
             if (step >= static_cast<int>(rec_path.size())) return;
             const V2 p{rec_path[step].x, rec_path[step].z};
-            if (step > 0) rec_vel = {(p.x - rec_at.x) / rec_per, (p.z - rec_at.z) / rec_per};
+            rec_vel = step > 0 ? V2{(p.x - rec_at.x) / rec_per, (p.z - rec_at.z) / rec_per}
+                               : V2{rec.velocity().x, rec.velocity().z};
             rec_at = p;
         }
         if (!other_path.empty()) {
             if (step >= static_cast<int>(other_path.size())) return;
             const V2 p{other_path[step].x, other_path[step].z};
-            if (step > 0)
-                other_vel = {(p.x - other_at.x) / other_per, (p.z - other_at.z) / other_per};
+            other_vel = step > 0
+                            ? V2{(p.x - other_at.x) / other_per, (p.z - other_at.z) / other_per}
+                            : V2{other.velocity().x, other.velocity().z};
             other_at = p;
         }
         if (will_collide(rec, rec_at, rec_vel, other, other_at, other_vel, ignore_braking)) {
