@@ -247,14 +247,14 @@ private:
     bool moho_active_ = false;  ///< following moho_
     // Moho's spline (docs/plans/2026-10-22-moho-spline-port-design.md).
     path::Spline spline_;
-    bool has_spline_ = false;      ///< Moho's mPath
+    bool has_spline_ = false;       ///< Moho's mPath
     bool waypoint_refresh_ = false; ///< mNeedsWaypointRefresh
     Vector3 steer_dest_{};          ///< mDestination
     bool steer_dest_set_ = false;
-    Vector3 avoid_target_{};        ///< mCollisionAvoidTarget
-    path::Node motion_node_{};      ///< CUnitMotion's mNextWaypoint
+    Vector3 avoid_target_{};   ///< mCollisionAvoidTarget
+    path::Node motion_node_{}; ///< CUnitMotion's mNextWaypoint
     bool motion_node_set_ = false;
-    bool steer_paused_ = false;     ///< mPausedForStateTransition
+    bool steer_paused_ = false; ///< mPausedForStateTransition
     /// Its target is outside the goal: driven through at speed, not stopped
     /// on (Moho's IAiSteering::UseTopSpeed).
     bool through_target_ = false;

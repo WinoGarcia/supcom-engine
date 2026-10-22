@@ -3,6 +3,7 @@
 #include "blueprints/footprint.hpp"
 #include "core/dmath.hpp"
 #include "map/pathfinding_grid.hpp"
+#include "sim/collision.hpp"
 #include "sim/entity_registry.hpp"
 #include "sim/navigator.hpp"
 #include "sim/sim_state.hpp"
@@ -356,8 +357,8 @@ void check_moho(SimState& sim, Unit& owner) {
     const f32 top = owner.max_speed();
     const f32 a = owner.drive().max_accel;
     const f32 nodes = nav.has_spline() ? static_cast<f32>(nav.spline().nodes().size()) : 0.0f;
-    const f32 radius = nodes * top * kTick + (a > 0 ? top * top / (a * 2.0f) : 0.0f) +
-                       larger_size(owner);
+    const f32 radius =
+        nodes * top * kTick + (a > 0 ? top * top / (a * 2.0f) : 0.0f) + larger_size(owner);
     std::vector<Unit*> preferred;
     std::vector<Unit*> deferred;
     for (Entity* e :
@@ -435,8 +436,9 @@ void resolve_moho(SimState& sim, Unit& owner) {
     steer_log(sim, owner, "sidestep");
     // The other brakes (MarkSecondarySteeringForRepath).
     if (!formation) {
-        const bool marks = other.is_naval() ? owner.is_naval()
-                                            : !ignores_structures(other) || ignores_structures(owner);
+        const bool marks = other.is_naval()
+                               ? owner.is_naval()
+                               : !ignores_structures(other) || ignores_structures(owner);
         if (marks) {
             Navigator& on = other.navigator();
             Navigator::Collision oc = on.collision();
@@ -473,8 +475,8 @@ void resolve_moho(SimState& sim, Unit& owner) {
             dir = normalized({own.x + away.x, own.z + away.z});
         }
     } else {
-        const f32 cross = (owner_live.z - other_live.z) * heading.x -
-                          heading.z * (owner_live.x - other_live.x);
+        const f32 cross =
+            (owner_live.z - other_live.z) * heading.x - heading.z * (owner_live.x - other_live.x);
         const f32 turn = (formation ? kPi * 0.25f : kPi * 0.5f) * (cross > 0 ? -1.0f : 1.0f);
         const f32 c = osc::dmath::cos(turn), s = osc::dmath::sin(turn);
         dir = {heading.x * c + heading.z * s, -heading.x * s + heading.z * c};
@@ -484,6 +486,77 @@ void resolve_moho(SimState& sim, Unit& owner) {
     Vector3 fits = avoid;
     if (!place(sim, owner, fits)) return;
     set(2, avoid);
+}
+
+/// Moho's unit half of CUnitMotion::ProcessSurfaceCollisionFromLastMove and
+/// Sim::DoCollisionsFor (FAF 0x00597CD0): the units its box overlaps are pushed apart,
+/// the push shared by their masses.
+void collide_moho_units(SimState& sim, Unit& owner) {
+    if (owner.is_air_unit() || owner.layer() == "Sub" || owner.is_dying() ||
+        owner.is_being_built() || owner.parent_entity_id() != 0 || can_fly(owner) ||
+        owner.pushed() || owner.is_naval() || owner.destroyed())
+        return;
+    const Vector3& ov = owner.motion_velocity();
+    if (!(ov.x * ov.x + ov.y * ov.y + ov.z * ov.z > 0.000001f) && !owner.surface_collision())
+        return;
+    const OrientedBox box =
+        oriented_box(owner.position(), owner.orientation(),
+                     {owner.size_x() * 0.5f, owner.size_y(), owner.size_z() * 0.5f});
+    f32 reach_x = 0;
+    f32 reach_z = 0;
+    for (size_t i = 0; i < 3; ++i) {
+        reach_x += std::abs(box.axis[i].x) * box.extent[i];
+        reach_z += std::abs(box.axis[i].z) * box.extent[i];
+    }
+    struct Hit {
+        u32 id;
+        f32 depth;
+    };
+    std::vector<Hit> hits;
+    sim.entity_registry().any_unit_collider(
+        box.centre.x - reach_x, box.centre.z - reach_z, box.centre.x + reach_x,
+        box.centre.z + reach_z, [&](const Entity& e) {
+            if (&e == &owner || e.destroyed()) return false;
+            const auto shape = collision_box(e);
+            if (!shape) return false; // shortcut: a sphere's contact is left out
+            if (const auto contact = box_contact(*shape, box))
+                hits.push_back({e.entity_id(), contact->depth});
+            return false;
+        });
+    const f32 owner_mass = owner.load_metric();
+    const f32 speed = std::sqrt(ov.x * ov.x + ov.y * ov.y + ov.z * ov.z);
+    const f32 approach = std::min(owner.max_speed() * 0.1f, speed);
+    const u32 owner_order =
+        owner.command_queue().empty() ? 0 : owner.command_queue().front().command_id;
+    for (const Hit& hit : hits) {
+        if (hit.depth < 0.001f) continue;
+        Entity* e = sim.entity_registry().find(hit.id);
+        if (!e || !e->is_unit()) continue;
+        auto& c = static_cast<Unit&>(*e);
+        if (ignored(owner, c) || c.is_air_unit()) continue;
+        // Two on one order work together: none of them pushes.
+        if (owner_order != 0 && !c.command_queue().empty() &&
+            c.command_queue().front().command_id == owner_order)
+            return;
+        if (!c.is_mobile() || same_formation_layer(owner, c)) continue;
+        V2 dir{owner.last_position().x - c.position().x, owner.last_position().z - c.position().z};
+        if (dir.x * dir.x + dir.z * dir.z < 0.000001f)
+            dir = {sim.random().range(-1.0f, 1.0f), sim.random().range(-1.0f, 1.0f)};
+        dir = normalized(dir);
+        const f32 push = std::max(larger_size(owner) * 0.5f, hit.depth) + approach;
+        const f32 their = owner_mass / (c.load_metric() + owner_mass);
+        const f32 mine = 1.0f - their;
+        const auto allowed = [](const Unit& pushed, const Unit& against) {
+            return pushed.footprint().flags == 0 ||
+                   (ignores_structures(pushed) && ignores_structures(against));
+        };
+        if (mine > 0.1f && allowed(owner, c) && !owner.immobile())
+            owner.add_impulse({dir.x * push * mine, 0, dir.z * push * mine},
+                              owner.navigator().has_motion_node());
+        if (their > 0.1f && allowed(c, owner) && !c.immobile())
+            c.add_impulse({-dir.x * push * their, 0, -dir.z * push * their},
+                          c.navigator().has_motion_node());
+    }
 }
 
 /// Moho's CAiSteeringImpl::Execute on a unit's spline, in its army's phase: the spline
@@ -497,7 +570,24 @@ void steer_moho(SimState& sim, Unit& u) {
     // ProcessSplineMovement.
     const auto process = [&] {
         const Vector3* dest = nav.steer_destination();
-        if (nav.has_spline() && nav.spline().at_end()) {
+        if (u.pushed()) {
+            steer_log(sim, u, "pushed");
+            // Pushed: off its spline till slower than a hundredth of its top speed a tick;
+            // pushed off one, it asks its way afresh.
+            if (nav.has_spline()) nav.spline_stop();
+            const Vector3& v = u.motion_velocity();
+            if (u.max_speed() * 0.01f > std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z)) {
+                u.set_pushed(false);
+                if (u.in_state_transition()) {
+                    u.set_in_state_transition(false);
+                    nav.moho_path().request_repath();
+                    if (dest) {
+                        nav.spline_generate(u, *dest, mode(), false);
+                        check_moho(sim, u);
+                    }
+                }
+            }
+        } else if (nav.has_spline() && nav.spline().at_end()) {
             if (!dest || Navigator::unit_at(u, *dest)) {
                 nav.spline_stop();
                 return;
@@ -739,6 +829,10 @@ void steer_units(SimState& sim, const std::vector<u32>& ids) {
         if (nav.has_collision() && now >= nav.collision().tick) resolve(sim, u, now, cache);
         else if (now >= nav.next_check()) check(sim, u, now, cache);
     }
+}
+
+void collide_units(SimState& sim, Unit& u) {
+    collide_moho_units(sim, u);
 }
 
 void steer_ground_units(SimState& sim) {

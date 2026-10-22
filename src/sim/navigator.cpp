@@ -459,9 +459,10 @@ void Navigator::drive_spline(Unit& unit, f32 max_speed, f64 dt, const map::Terra
         unit.note_drive(0, 0, max_speed, Unit::MotionTurn::Straight);
         return;
     }
-    // No node handed over: undriven, it coasts (CalcMoveCommon, Unit::coast). The node
-    // stays the motion's till its steering hands over the next (mNextWaypoint).
-    if (!motion_node_set_) return;
+    // No node handed over, or pushed: undriven, it coasts on its velocity (CalcMoveCommon's
+    // branch for no node or mIsBeingPushed; Unit::coast_moho).
+    // The node stays the motion's till its steering hands over the next (mNextWaypoint).
+    if (!motion_node_set_ || unit.pushed()) return;
     const auto step = static_cast<f32>(dt);
     const Unit::Drive& d = unit.drive();
     Vector3 pos = unit.pending_position();
@@ -485,18 +486,23 @@ void Navigator::drive_spline(Unit& unit, f32 max_speed, f64 dt, const map::Terra
     if (d.turn_radius > 0)
         max_turn = std::max(max_turn, std::abs(unit.ground_speed()) * step * unit.turn_mult() /
                                           d.turn_radius);
-    const Unit::MotionTurn turning = turn < 1e-3f                ? Unit::MotionTurn::Straight
+    const Unit::MotionTurn turning = turn < 1e-3f               ? Unit::MotionTurn::Straight
                                      : turn >= max_turn * 0.99f ? Unit::MotionTurn::SharpTurn
                                                                 : Unit::MotionTurn::Turn;
     // A step onto ground it won't fit leaves it where it was (CalcMoveCommon), and
     // its steering asks for the way afresh.
     if (moho_active_ && sim_ && sim_->footprint_fits_at(unit.footprint(), pos.x, pos.z) == 0 &&
         sim_->footprint_fits_at(unit.footprint(), from.x, from.z) != 0) {
-        moho_.request_repath();
-        spline_stop();
-        // shortcut: Moho pushes it back (AddImpulse) and its navigator gives the way again;
-        // here its steering sets off afresh for the waypoint it has.
-        waypoint_refresh_ = true;
+        // It stays, its velocity gone, and is pushed back toward where it was
+        // (CalcMoveCommon: AddImpulse at a hundredth of its top speed).
+        unit.set_motion_velocity({});
+        const f32 bx = from.x - pos.x;
+        const f32 bz = from.z - pos.z;
+        const f32 blen = std::sqrt(bx * bx + bz * bz);
+        if (!unit.pushed() && blen > 0) {
+            const f32 scale = unit.nav_speed() * 0.010000001f / blen;
+            unit.add_impulse({bx * scale, 0, bz * scale}, true);
+        }
         unit.set_orientation(
             terrain ? unit.ground_stance(terrain, from.x, from.z, level).orientation : level);
         unit.note_drive(0, 0, max_speed, turning);
@@ -504,6 +510,7 @@ void Navigator::drive_spline(Unit& unit, f32 max_speed, f64 dt, const map::Terra
     }
     unit.set_position(pos);
     unit.set_orientation(facing);
+    unit.set_motion_velocity({pos.x - from.x, pos.y - from.y, pos.z - from.z});
     // Its speed along its heading; it is stopping within a second's run of its target
     // (CUnitMotion::ProcessCommonMotionState).
     const f32 speed = ((pos.x - from.x) * osc::dmath::sin(heading) +

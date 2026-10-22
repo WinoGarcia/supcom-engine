@@ -9534,8 +9534,11 @@ void test_crowd(TestContext& ctx) {
             for j = i + 1, n do
                 local q = __osc_group[j]:GetPosition()
                 local apart = math.sqrt((p[1] - q[1]) ^ 2 + (p[3] - q[3]) ^ 2)
-                -- A Striker is 0.9 long: two apart by less than 0.8 overlap.
-                if apart < 0.8 then error('tanks ' .. i .. ' and ' .. j .. ' are ' .. apart .. ' apart') end
+                -- A Striker is 0.9 long: two apart by less than 0.8 overlap. With Moho
+                -- pathing its motion meets boxes, 0.7 wide: side by side, retail's
+                -- Strikers (crowdgap probe) come within 0.76 of each other.
+                local least = __osc_moho_pathing and 0.7 or 0.8
+                if apart < least then error('tanks ' .. i .. ' and ' .. j .. ' are ' .. apart .. ' apart') end
             end
         end
     )");

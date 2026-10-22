@@ -1249,6 +1249,10 @@ void StateIO::save(StateWriter& w, const Unit& u) {
     w.f32v(u.top_speed_);
     w.b(u.drove_);
     w.b(u.jostled_);
+    w.vec3(u.motion_velocity_);
+    w.b(u.pushed_);
+    w.b(u.in_state_transition_);
+    w.b(u.surface_collision_);
     w.u32v(u.shield_entity_id_);
     w.b(u.busy_);
     w.i32v(u.stun_ticks_);
@@ -1662,6 +1666,10 @@ void StateIO::load(StateReader& r, Unit& u, SimState& sim) {
     u.top_speed_ = r.f32v();
     u.drove_ = r.b();
     u.jostled_ = r.b();
+    u.motion_velocity_ = r.vec3();
+    u.pushed_ = r.b();
+    u.in_state_transition_ = r.b();
+    u.surface_collision_ = r.b();
     u.shield_entity_id_ = r.u32v();
     u.busy_ = r.b();
     u.stun_ticks_ = r.i32v();

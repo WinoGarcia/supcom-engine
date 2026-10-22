@@ -684,6 +684,7 @@ Entity::Walk SimState::step_entity(Entity& e, bool attached, SimContext& ctx) {
     if (e.is_unit()) {
         auto& unit = static_cast<Unit&>(e);
         collide_with_props(unit, entity_registry_, L_, tick_count());
+        if (moho_pathing_) collide_units(*this, unit);
         unit.update(SECONDS_PER_TICK, ctx);
         unit.note_queue_head();
         return Entity::Walk::Stepping;
@@ -2387,10 +2388,13 @@ void SimState::update_entities() {
     }
     walk = std::move(walked);
     stepping_events_.clear();
-    separate_ground_units();
+    // With Moho pathing, units meet as Moho's motion has them (collide_units).
+    // shortcut: Moho's motion leaves submerged units be (ProcessSurfaceCollisionFromLastMove
+    // skips LAYER_Sub); the engine's separation keeps them apart until that is probed.
+    separate_ground_units(moho_pathing_);
 }
 
-void SimState::separate_ground_units() {
+void SimState::separate_ground_units(bool submerged_only) {
     PROFILE_ZONE("Sim::separation");
     struct Body {
         Unit* unit;
@@ -2407,6 +2411,7 @@ void SimState::separate_ground_units() {
         if (u.destroyed() || u.is_dying() || u.is_air_unit() || u.max_speed() <= 0 ||
             u.is_being_built() || u.transport_id() != 0 || u.parent_entity_id() != 0)
             return;
+        if (submerged_only && u.layer() != "Sub") return;
         const f32 r = u.separation_radius();
         if (r <= 0) return;
         const Vector3& p = u.position();
