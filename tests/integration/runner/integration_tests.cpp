@@ -9545,6 +9545,8 @@ void test_crowd(TestContext& ctx) {
             end
         end
     )");
+    // Retail's last of the six goes idle 215 ticks after the order (crowd probe's /synclog).
+    run(50);
     lua_check("Test 2: their orders are done: none still jostling for the spot", R"(
         for i, u in __osc_group do
             if u:IsMoving() then error('tank ' .. i .. ' is still trying to reach it') end

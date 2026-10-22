@@ -79,3 +79,26 @@ at the same tick along each leg:
 
 The worst legs are the special units (`url0402`, `xsl0402`, `url0001`, `ual0401`). Each later step
 reports the same table; none may lower the counts within 0.01, 0.1 or 0.5.
+
+## 4. A stop checks its meetings again
+
+`CAiSteeringImpl::Stop` (0x005D35E0) drops the spline, and when nodes were left on it
+(`mCurrentNodeIndex < nodes.size()`) it runs `CheckCollisions` again. The engine now does too, at
+each of the steering's stops: pushed, at the destination, and paused for a state change.
+
+The crowd probe (six Strikers sent to one point; retail's `/synclog` beats against `--steer-log`):
+
+| | retail | before | after |
+|---|---|---|---|
+| first tick a unit differs | — | 104 | 104 |
+| least distance apart at tick 200 | 0.899 | 0.505 | 0.755 |
+| tick each of units 1-6 goes idle | 215, 158, 175, 126, 95, 189 | 229, 192, 165, 126, 95, 229 | 202, 176, 199, 126, 95, 158 |
+
+Drivegrid stays at 256 of 337 legs within 0.01; the cone scenes are unchanged. `--crowd-test` waits
+250 ticks, not 200, before it asks that every order is done: retail's last unit goes idle at 215.
+
+Still open: at tick 95 retail's unit 4 resolves a meeting with unit 5, which went idle that tick.
+Only unit 5's checks can record it, and with the engine's positions and `UnitsWillCollide` none of them
+finds one. `SetWaypoints(0)` (0x005D29C0) brakes a unit still on its spline on a fresh one
+(`Update(3)`) and checks its meetings, but retail's unit 5 then coasts (its steps 0.130, 0.069, 0.021
+are `CalcMoveCommon`'s coast, not the spline's braking), so the engine still drops the spline there.

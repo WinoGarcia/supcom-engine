@@ -557,6 +557,12 @@ void steer_moho(SimState& sim, Unit& u) {
     const auto mode = [&] {
         return nav.through_target() ? path::PathType::TopSpeed : path::PathType::Normal;
     };
+    // Stop: off its spline; with nodes left on it, its meetings checked afresh.
+    const auto stop = [&] {
+        const bool remaining = nav.has_spline() && !nav.spline().empty();
+        nav.spline_stop();
+        if (remaining) check_moho(sim, u);
+    };
     // ProcessSplineMovement.
     const auto process = [&] {
         const Vector3* dest = nav.steer_destination();
@@ -564,7 +570,7 @@ void steer_moho(SimState& sim, Unit& u) {
             steer_log(sim, u, "pushed");
             // Pushed: off its spline till slower than a hundredth of its top speed a tick;
             // pushed off one, it asks its way afresh.
-            if (nav.has_spline()) nav.spline_stop();
+            if (nav.has_spline()) stop();
             const Vector3& v = u.motion_velocity();
             if (u.max_speed() * 0.01f > std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z)) {
                 u.set_pushed(false);
@@ -579,7 +585,7 @@ void steer_moho(SimState& sim, Unit& u) {
             }
         } else if (nav.has_spline() && nav.spline().at_end()) {
             if (!dest || Navigator::unit_at(u, *dest)) {
-                nav.spline_stop();
+                stop();
                 return;
             }
             nav.spline_generate(u, *dest, mode(), true);
@@ -588,7 +594,7 @@ void steer_moho(SimState& sim, Unit& u) {
         if (!nav.steer_paused()) {
             if (u.immobile()) {
                 nav.set_steer_paused(true);
-                nav.spline_stop();
+                stop();
                 return;
             }
         } else if (!u.immobile()) {

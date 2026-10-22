@@ -309,6 +309,9 @@ void Navigator::navigate(Unit& unit) {
         // steering->Stop() retargets CUnitMotion to where the unit is, which
         // brakes it from its speed (CUnitMotion::Stop); undriven, the unit
         // coasts to a stop at its brake (Unit::coast), not dead in a tick.
+        // shortcut: Moho's SetWaypoints(0) brakes one still on its spline on a fresh one and
+        // checks its meetings, yet retail's crowd probe shows it coasting; port once a probe
+        // shows why (docs/plans/2026-10-22-moho-spline-port-design.md, section 4).
         if (sim_->steer_log())
             *sim_->steer_log() << "STEER t=" << sim_->tick_count() << ' ' << unit.blueprint_id()
                                << " waypoints none #" << EntityRegistry::moho_id(unit.entity_id())
