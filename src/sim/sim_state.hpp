@@ -743,6 +743,12 @@ public:
         entity_trace_from_ = from;
         entity_trace_to_ = to;
     }
+    /// Write each ground unit's steering decisions to `out`, a line each
+    /// ("STEER t=<tick> <blueprint> <event>"): the waypoints its navigator sets
+    /// and the meetings it resolves and how, as the original's /synclog does
+    /// (--steer-log; tools/moho_probes/drivegrid/steer_diff.py). Null stops it.
+    void set_steer_log(std::ostream* out) { steer_log_ = out; }
+    std::ostream* steer_log() const { return steer_log_; }
 
     // --- Deterministic sim RNG ---
     // Any sim randomness (e.g. weapon firing spread) must draw from this seeded
@@ -1165,6 +1171,7 @@ private:
     std::function<void(const SimState&)> beat_observer_;
     std::ostream* checksum_trace_ = nullptr;
     std::ostream* entity_trace_ = nullptr;
+    std::ostream* steer_log_ = nullptr;
     std::ostream* rng_trace_ = nullptr;
     u32 rng_trace_from_ = 0;
     u32 rng_trace_to_ = 0;
