@@ -1235,6 +1235,11 @@ bool Unit::motion_tick(f64 dt, SimContext& ctx) {
         }
     }
     surface_collision_ = false; // CalcMoveLand has met what it touched
+    // Moho's motion task ends a ground unit's tick in MoveTo, which normalizes its
+    // orientation, standing or not (CUnitMotion::MoveTo, 0x006B92E0).
+    if (ctx.sim && ctx.sim->moho_pathing() && is_mobile() && !can_fly() && !immobile() &&
+        parent_entity_id() == 0 && !crashing_)
+        set_orientation(quat_normalized_moho(pending_orientation()));
 
     // A sub dives or surfaces, moving or not (M206o).
     tick_dive(ctx.terrain, L);
