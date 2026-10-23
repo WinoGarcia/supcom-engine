@@ -7,6 +7,7 @@
 #include "sim/path_tables.hpp"
 #include "sim/prepare_move.hpp"
 #include "sim/sim_state.hpp"
+#include "sim/steering.hpp"
 #include "sim/unit.hpp"
 #include "map/pathfinder.hpp"
 #include "map/terrain.hpp"
@@ -306,17 +307,15 @@ void Navigator::navigate(Unit& unit) {
     moho_.update(nav, world, army->path_queue());
     const State st = moho_.state();
     if (st == State::Idle || st == State::Failed) {
-        // There (or as near as it gets), or given up: it stops. Moho's
-        // steering->Stop() retargets CUnitMotion to where the unit is, which
-        // brakes it from its speed (CUnitMotion::Stop); undriven, the unit
-        // coasts to a stop at its brake (Unit::coast), not dead in a tick.
-        // shortcut: Moho's SetWaypoints(0) brakes one still on its spline on a fresh one and
-        // checks its meetings, yet retail's crowd probe shows it coasting; port once a probe
-        // shows why (docs/plans/2026-10-22-moho-spline-port-design.md, section 4).
+        // There (or as near as it gets), or given up: CAiNavigatorLand::Execute stops its
+        // steering first (Stop: off its spline, its meetings checked afresh if nodes were
+        // left), then goes idle, handing the steering no waypoints, and nothing is left to
+        // brake on. Undriven, it coasts.
         if (sim_->steer_log())
             *sim_->steer_log() << "STEER t=" << sim_->tick_count() << ' ' << unit.blueprint_id()
                                << " waypoints none #" << EntityRegistry::moho_id(unit.entity_id())
                                << '\n';
+        steer_stop(*sim_, unit);
         reset_moho();
         arrive();
         ended_ = true;

@@ -561,12 +561,7 @@ void steer_moho(SimState& sim, Unit& u) {
     const auto mode = [&] {
         return nav.through_target() ? path::PathType::TopSpeed : path::PathType::Normal;
     };
-    // Stop: off its spline; with nodes left on it, its meetings checked afresh.
-    const auto stop = [&] {
-        const bool remaining = nav.has_spline() && !nav.spline().empty();
-        nav.spline_stop();
-        if (remaining) check_moho(sim, u);
-    };
+    const auto stop = [&] { steer_stop(sim, u); };
     // ProcessSplineMovement.
     const auto process = [&] {
         const Vector3* dest = nav.steer_destination();
@@ -833,6 +828,14 @@ void steer_units(SimState& sim, const std::vector<u32>& ids) {
 
 void collide_units(SimState& sim, Unit& u) {
     collide_moho_units(sim, u);
+}
+
+void steer_stop(SimState& sim, Unit& u) {
+    Navigator& nav = u.navigator();
+    if (!nav.has_spline()) return;
+    const bool remaining = !nav.spline().empty();
+    nav.spline_stop();
+    if (remaining) check_moho(sim, u);
 }
 
 void steer_ground_units(SimState& sim) {
