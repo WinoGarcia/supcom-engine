@@ -3409,7 +3409,8 @@ Quaternion tilt_to(const Quaternion& q, const Vector3& normal) {
                      2.0f * (q.z * q.y + q.w * q.x)};
     const Vector3 h = normalized({up.x + n.x, up.y + n.y, up.z + n.z});
     Quaternion delta;
-    delta.w = up.x * h.x + up.y * h.y + up.z * h.z;
+    // The dot summed (z, x) then y (BuildTiltShortestArcDelta, 0x0050CBC4).
+    delta.w = (up.z * h.z + up.x * h.x) + up.y * h.y;
     if (delta.w == 0.0f) {
         // Exactly upside down: no half-way vector, so a half turn about an
         // axis square to up, away from its shorter lane of x and y (in
@@ -3430,7 +3431,12 @@ Quaternion tilt_to(const Quaternion& q, const Vector3& normal) {
         delta.y = up.z * h.x - up.x * h.z;
         delta.z = up.x * h.y - up.y * h.x;
     }
-    return quat_multiply(delta, q);
+    // delta * q, grouped as COORDS_Tilt inlines it (0x0050B8DA).
+    const Quaternion& d = delta;
+    return {((q.z * d.y + q.x * d.w) + q.w * d.x) - q.y * d.z,
+            ((q.w * d.y + q.x * d.z) + q.y * d.w) - q.z * d.x,
+            ((q.w * d.z + q.z * d.w) + q.y * d.x) - q.x * d.y,
+            ((q.w * d.w - q.x * d.x) - q.y * d.y) - q.z * d.z};
 }
 
 // Moho's CUnitMotion::SnapToGround (from CalcMoveHover and CalcMoveLand).
@@ -3446,8 +3452,28 @@ Unit::GroundStance Unit::ground_stance(const map::Terrain* terrain, f32 x, f32 z
             walks_seabed() ? terrain->get_terrain_height(x, z) : terrain->get_surface_height(x, z);
         return {platform ? ground + platform->raised_platform_height(x, z) : ground, facing};
     }
+    // Moho's MultQuadVec: QuatToMatrix's rows (products pre-doubled), each dotted with the
+    // offset from zero up, x then y then z.
+    const f32 x2 = facing.x * 2.0f, y2 = facing.y * 2.0f, z2 = facing.z * 2.0f;
+    const f32 wx = facing.w * x2, wy = facing.w * y2, wz = facing.w * z2;
+    const f32 xx = facing.x * x2, xy = facing.x * y2, xz = facing.x * z2;
+    const f32 yy = facing.y * y2, yz = facing.y * z2, zz = facing.z * z2;
+    const f32 rows[3][3] = {{1.0f - (zz + yy), xy - wz, xz + wy},
+                            {xy + wz, 1.0f - (zz + xx), yz - wx},
+                            {xz - wy, yz + wx, 1.0f - (yy + xx)}};
+    const auto mult_quad_vec = [&](f32 dx, f32 dz) {
+        Vector3 out;
+        f32* lanes[3] = {&out.x, &out.y, &out.z};
+        const f32 in[3] = {dx, 0.0f, dz};
+        for (int r = 0; r < 3; ++r) {
+            f32 acc = 0.0f;
+            for (int c = 0; c < 3; ++c) acc = in[c] * rows[r][c] + acc;
+            *lanes[r] = acc;
+        }
+        return out;
+    };
     const auto corner = [&](f32 dx, f32 dz) {
-        const Vector3 d = quat_rotate(facing, {dx, 0, dz});
+        const Vector3 d = mult_quad_vec(dx, dz);
         Vector3 c{x + d.x, terrain->get_terrain_height(x + d.x, z + d.z), z + d.z};
         if (hover && terrain->has_water()) {
             c.y = std::max(c.y, terrain->water_elevation());
