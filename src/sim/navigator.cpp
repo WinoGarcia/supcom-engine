@@ -427,11 +427,31 @@ bool Navigator::unit_at(const Unit& unit, const Vector3& p) {
            std::lrint(at.z - hz) == std::lrint(p.z - hz);
 }
 
+namespace {
+
+/// A node's height as Generate and Update give it: the terrain's, or the water's where a
+/// ship, a floating amphibian or a hover rides above it.
+void set_node_height(path::SplineWorld& world, const map::Terrain* terrain, const Unit& unit) {
+    if (!terrain) return;
+    const std::string& motion = unit.motion_type();
+    const bool rides_water = motion == "RULEUMT_Water" || motion == "RULEUMT_AmphibiousFloating" ||
+                             motion == "RULEUMT_Hover";
+    world.height = [terrain, rides_water](f32 x, f32 z) {
+        const f32 ground = terrain->get_terrain_height(x, z);
+        return rides_water && terrain->has_water() && terrain->water_elevation() > ground
+                   ? terrain->water_elevation()
+                   : ground;
+    };
+}
+
+} // namespace
+
 void Navigator::spline_generate(const Unit& unit, const Vector3& to, path::PathType type,
                                 bool carry_on) {
     collision_ = {}; // UpdatePath starts its collision afresh
     path::SplineWorld world;
     if (sim_) {
+        set_node_height(world, sim_->terrain(), unit);
         world.wont_fit = [&](f32 x, f32 z) {
             return sim_->footprint_fits_at(unit.footprint(), x, z) == 0;
         };
@@ -444,7 +464,9 @@ void Navigator::spline_generate(const Unit& unit, const Vector3& to, path::PathT
 
 void Navigator::spline_brake(const Unit& unit, int mode) {
     collision_ = {};
-    spline_.brake(spline_unit(unit), spline_pose(unit), mode, path::SplineWorld{});
+    path::SplineWorld world;
+    if (sim_) set_node_height(world, sim_->terrain(), unit);
+    spline_.brake(spline_unit(unit), spline_pose(unit), mode, world);
     has_spline_ = true;
 }
 
