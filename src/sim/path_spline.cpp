@@ -134,9 +134,10 @@ void rotate_toward(f32 max_turn, f32 source_x, f32 source_z, f32 target_x, f32 t
     f32 cx = max_cos;
     f32 cz = turn_sin;
     if (std::fabs(turn_sin * turn_sin + max_cos * max_cos - 1.0f) > 0.001f) {
-        const f32 len = std::sqrt(cx * cx + cz * cz);
-        cx /= len;
-        cz /= len;
+        // Wm3's Normalize: times the inverse length.
+        const f32 inv = 1.0f / std::sqrt(cx * cx + cz * cz);
+        cx *= inv;
+        cz *= inv;
     }
     out_z = cx * source_z + cz * source_x;
     out_x = cx * source_x - cz * source_z;
