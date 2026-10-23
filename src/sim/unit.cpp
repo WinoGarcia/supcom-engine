@@ -3297,6 +3297,10 @@ void Unit::coast_moho(const map::Terrain* terrain) {
     if (v.x * v.x + v.y * v.y + v.z * v.z < 0.000001f && !turned_in_place_) {
         motion_velocity_ = {};
         ground_speed_ = 0;
+        // Still, it is snapped to the ground only when its motion asks (CalcMoveLand:
+        // mProcessSurfaceCollision, set as it is made and as it is pushed).
+        if (surface_collision_ && terrain)
+            stand_on_ground(terrain, pending_position(), pending_orientation(), false);
         return;
     }
     const f32 rate = drive_.max_brake > 0 ? drive_.max_brake : drive_.max_accel;

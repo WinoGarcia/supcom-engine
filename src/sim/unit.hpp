@@ -2002,7 +2002,7 @@ private:
     Vector3 motion_velocity_{};        ///< CUnitMotion's mVelocity, a tick's step
     bool pushed_ = false;              ///< mIsBeingPushed
     bool in_state_transition_ = false; ///< mInStateTransition
-    bool surface_collision_ = false;   ///< mProcessSurfaceCollision
+    bool surface_collision_ = true;    ///< mProcessSurfaceCollision; a new CUnitMotion's is set
     /// Give up slots whose unit is no longer aboard (it died, was taken off
     /// the cargo list, or left), as Moho's TransportUnreserveUnattachedSpots.
     void release_stale_slots(const EntityRegistry& registry);
