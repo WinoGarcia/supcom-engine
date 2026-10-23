@@ -405,12 +405,15 @@ path::SplineUnit spline_unit(const Unit& unit) {
 
 /// Where it is: its position, heading and last tick's step.
 path::Pose spline_pose(const Unit& unit) {
-    const f32 heading = quat_yaw(unit.orientation());
+    // Its forward axis straight from its orientation, pitch and all, as Moho's
+    // QuatForwardAxis (Generate, 0x005B30E3): a unit made side-on to its goal has a
+    // forward z of float noise, whose sign picks forward or reverse.
+    const Quaternion& q = unit.orientation();
+    const Vector3 forward{(q.w * q.y + q.z * q.x) * 2.0f, (q.z * q.y - q.w * q.x) * 2.0f,
+                          1.0f - (q.y * q.y + q.x * q.x) * 2.0f};
     const Vector3& v = unit.velocity();
     constexpr f32 kTick = 0.1f;
-    return {unit.position(),
-            {osc::dmath::sin(heading), 0, osc::dmath::cos(heading)},
-            {v.x * kTick, v.y * kTick, v.z * kTick}};
+    return {unit.position(), forward, {v.x * kTick, v.y * kTick, v.z * kTick}};
 }
 
 } // namespace

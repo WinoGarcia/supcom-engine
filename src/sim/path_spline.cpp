@@ -226,7 +226,9 @@ void Spline::generate(const SplineUnit& u, const Pose& pose, const Vector3& dest
     const f32 distance = std::sqrt(dz * dz + dx * dx);
     if (distance < 0.001f) return;
     Vector3 velocity = pose.velocity;
-    f32 alignment = (dz / distance) * forward.z + (dx / distance) * forward.x;
+    // Moho's direction to it is the delta times the inverse length (DirectionOfDelta).
+    const f32 inv_distance = 1.0f / distance;
+    f32 alignment = (inv_distance * dz) * forward.z + (inv_distance * dx) * forward.x;
     const f32 current_speed =
         std::sqrt(velocity.x * velocity.x + velocity.z * velocity.z + velocity.y * velocity.y);
     f32 ratio = current_speed * 10.0f / u.max_speed;
@@ -383,7 +385,8 @@ void Spline::generate(const SplineUnit& u, const Pose& pose, const Vector3& dest
         if (remaining == 0) {
             alignment = std::numeric_limits<f32>::max() * (forward.x + forward.z);
         } else {
-            alignment = forward.z * (dz / remaining) + (dx / remaining) * forward.x;
+            const f32 inv_remaining = 1.0f / remaining;
+            alignment = forward.z * (inv_remaining * dz) + (inv_remaining * dx) * forward.x;
         }
         if (at_goal) state = PointState::Done;
 
