@@ -3,6 +3,7 @@
 #include "sim/air_combat.hpp"
 #include "sim/army_brain.hpp"
 #include "sim/entity_registry.hpp"
+#include "sim/flight_math.hpp"
 #include "sim/path_tables.hpp"
 #include "sim/prepare_move.hpp"
 #include "sim/sim_state.hpp"
@@ -481,10 +482,12 @@ void Navigator::drive_spline(Unit& unit, f32 max_speed, f64 dt, const map::Terra
     pos.x = node->position.x;
     pos.z = node->position.z;
     const f32 heading = osc::dmath::atan2(node->direction.x, node->direction.z);
-    const Quaternion level = euler_to_quat(heading, 0.0f, 0.0f);
+    // Facing the node's heading as CalcMoveCommon sets it (COORDS_Orient), tilted to the
+    // ground unnormalized: the motion normalizes once, in MoveTo.
+    const Quaternion level = coords_orient_moho(node->direction);
     Quaternion facing = level;
     if (terrain) {
-        const Unit::GroundStance stance = unit.ground_stance(terrain, pos.x, pos.z, level);
+        const Unit::GroundStance stance = unit.ground_stance(terrain, pos.x, pos.z, level, false);
         pos.y = stance.y;
         facing = stance.orientation;
     }
@@ -512,7 +515,8 @@ void Navigator::drive_spline(Unit& unit, f32 max_speed, f64 dt, const map::Terra
             unit.add_impulse({bx * scale, 0, bz * scale}, true);
         }
         unit.set_orientation(
-            terrain ? unit.ground_stance(terrain, from.x, from.z, level).orientation : level);
+            terrain ? unit.ground_stance(terrain, from.x, from.z, level, false).orientation
+                    : level);
         unit.note_drive(0, 0, max_speed, turning);
         return;
     }

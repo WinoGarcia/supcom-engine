@@ -3317,7 +3317,7 @@ void Unit::coast_moho(const map::Terrain* terrain) {
     const f32 heading = quat_yaw(pending_orientation());
     ground_speed_ = (v.x * osc::dmath::sin(heading) + v.z * osc::dmath::cos(heading)) * 10.0f;
     if (terrain) {
-        stand_on_ground(terrain, p, pending_orientation());
+        stand_on_ground(terrain, p, pending_orientation(), false);
     } else {
         set_position(p);
     }
@@ -3431,7 +3431,7 @@ Quaternion tilt_to(const Quaternion& q, const Vector3& normal) {
 
 // Moho's CUnitMotion::SnapToGround (from CalcMoveHover and CalcMoveLand).
 Unit::GroundStance Unit::ground_stance(const map::Terrain* terrain, f32 x, f32 z,
-                                       const Quaternion& facing) const {
+                                       const Quaternion& facing, bool normalize) const {
     if (!terrain) {
         return {pending_position().y, facing};
     }
@@ -3473,12 +3473,15 @@ Unit::GroundStance Unit::ground_stance(const map::Terrain* terrain, f32 x, f32 z
                                               d0.x * d1.y - d0.y * d1.x};
     if (hover) {
         y += elevation_;
-        normal.x += hover_tilt_.x + wobble_offset_.x;
-        normal.y += hover_tilt_.y + wobble_offset_.y;
-        normal.z += hover_tilt_.z + wobble_offset_.z;
+        // The tilt is added to the normal first, the wobble to that sum (SnapToGround,
+        // 0x006C1C15).
+        normal.x = (hover_tilt_.x + normal.x) + wobble_offset_.x;
+        normal.y = (hover_tilt_.y + normal.y) + wobble_offset_.y;
+        normal.z = (hover_tilt_.z + normal.z) + wobble_offset_.z;
     }
     // Moho's MoveTo normalizes the orientation SnapToGround tilted (faf-re CUnitMotion.cpp).
-    return {y, quat_normalized(tilt_to(facing, normal))};
+    const Quaternion tilted = tilt_to(facing, normal);
+    return {y, normalize ? quat_normalized(tilted) : tilted};
 }
 
 namespace {
@@ -3536,8 +3539,9 @@ void Unit::tick_hover(const map::Terrain* terrain, u32 tick, SimRandom& random) 
     }
 }
 
-void Unit::stand_on_ground(const map::Terrain* terrain, Vector3 at, const Quaternion& facing) {
-    const GroundStance stance = ground_stance(terrain, at.x, at.z, facing);
+void Unit::stand_on_ground(const map::Terrain* terrain, Vector3 at, const Quaternion& facing,
+                           bool normalize) {
+    const GroundStance stance = ground_stance(terrain, at.x, at.z, facing, normalize);
     at.y = stance.y;
     set_position(at);
     set_orientation(stance.orientation);

@@ -1060,13 +1060,15 @@ public:
         Quaternion orientation;
     };
     /// Its height with its centre at (x, z), and `facing` tilted to the
-    /// ground under its box.
-    GroundStance ground_stance(const map::Terrain* terrain, f32 x, f32 z,
-                               const Quaternion& facing) const;
+    /// ground under its box; normalized unless `normalize` is false (with Moho
+    /// pathing its motion normalizes once, in MoveTo).
+    GroundStance ground_stance(const map::Terrain* terrain, f32 x, f32 z, const Quaternion& facing,
+                               bool normalize = true) const;
     f32 ground_y(const map::Terrain* terrain, f32 x, f32 z) const {
         return ground_stance(terrain, x, z, pending_orientation()).y;
     }
-    void stand_on_ground(const map::Terrain* terrain, Vector3 at, const Quaternion& facing);
+    void stand_on_ground(const map::Terrain* terrain, Vector3 at, const Quaternion& facing,
+                         bool normalize = true);
     bool snaps_to_ground() const {
         return !can_fly() && (is_hover() || layer_ == "Land" || layer_ == "Seabed");
     }
