@@ -477,14 +477,15 @@ TEST_CASE("Each UserUnit method reads the unit's tick", "[userunit]") {
     lua_setglobal(L, "neutral");
     // The UI's first read captures the tick as it stands, before a tick
     // would run the unit's orders.
-    auto result = w.ui.do_string(R"(
+    auto result =
+        w.ui.do_string(R"(
         local u = units[1]
         local function expect(what, got, want)
             if got ~= want then error(what .. ': ' .. tostring(got) .. ', ' .. tostring(want) .. ' expected') end
         end
         -- A string, as Moho's "%d" (faf-re): scripts key tables by it.
         expect('GetEntityId', u:GetEntityId(), ')" +
-                                 std::to_string(w.id) + R"(')
+                       std::to_string(osc::sim::EntityRegistry::moho_id(w.id)) + R"(')
         expect('EntityId', u.EntityId, u:GetEntityId())
         expect('GetArmy', u:GetArmy(), 1)
         expect('neutral GetArmy', neutral[1]:GetArmy(), -1)
@@ -511,13 +512,13 @@ TEST_CASE("Each UserUnit method reads the unit's tick", "[userunit]") {
         local queue = u:GetCommandQueue()
         expect('GetCommandQueue', table.getn(queue), 2)
         expect('targetId', queue[1].targetId, ')" +
-                                 std::to_string(other_id) + R"(')
+                       std::to_string(osc::sim::EntityRegistry::moho_id(other_id)) + R"(')
         expect('HasUnloadCommandQueuedUp', u:HasUnloadCommandQueuedUp(), true)
         expect('GetFocus', u:GetFocus():GetEntityId(), ')" +
-                                 std::to_string(other_id) + R"(')
+                       std::to_string(osc::sim::EntityRegistry::moho_id(other_id)) + R"(')
         expect('GetCreator', u:GetCreator():GetArmy(), 2)
         expect('GetGuardedEntity', u:GetGuardedEntity():GetEntityId(), ')" +
-                                 std::to_string(other_id) + R"(')
+                       std::to_string(osc::sim::EntityRegistry::moho_id(other_id)) + R"(')
         u:AddSelectionSet('1')
         expect('HasSelectionSet', u:HasSelectionSet('1'), true)
         expect('GetSelectionSets', u:GetSelectionSets()[1], '1')
@@ -565,10 +566,11 @@ TEST_CASE("A guard fighting for its guard still guards, as a UI script sees it",
     guard.type = osc::sim::CommandType::Guard;
     guard.target_id = ward_id;
     u.push_command(guard, false);
-    auto result = w.ui.do_string(R"(
+    auto result =
+        w.ui.do_string(R"(
         local guarded = units[1]:GetGuardedEntity()
         if not guarded or guarded:GetEntityId() ~= ')" +
-                                 std::to_string(ward_id) + R"(' then
+                       std::to_string(osc::sim::EntityRegistry::moho_id(ward_id)) + R"(' then
             error('guards ' .. tostring(guarded and guarded:GetEntityId()))
         end
     )");
