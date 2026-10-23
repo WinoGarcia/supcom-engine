@@ -49,10 +49,15 @@ Params params_for(const SplineUnit& u, const Vector3& from, const Vector3& to,
     p.distance = std::sqrt(p.distance_sq);
     p.forward_x = forward.x;
     p.forward_z = -forward.z;
+    // Wm3's Normalize: times the inverse length; zero at 1e-6 or under.
     const f32 flen = std::sqrt(p.forward_x * p.forward_x + p.forward_z * p.forward_z);
-    if (flen > 0) {
-        p.forward_x /= flen;
-        p.forward_z /= flen;
+    if (flen > 1.0e-6f) {
+        const f32 inv = 1.0f / flen;
+        p.forward_x *= inv;
+        p.forward_z *= inv;
+    } else {
+        p.forward_x = 0;
+        p.forward_z = 0;
     }
     p.turn_rate = u.turn_rate * u.turn_mult * kDegreesToRadiansPerTick;
     // The limit replaces the blueprint's speed unless it is greater.
