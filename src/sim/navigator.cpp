@@ -507,6 +507,7 @@ void Navigator::drive_spline(Unit& unit, f32 max_speed, f64 dt, const map::Terra
         // It stays, its velocity gone, and is pushed back toward where it was
         // (CalcMoveCommon: AddImpulse at a hundredth of its top speed).
         unit.set_motion_velocity({});
+        unit.set_motion_pos(from);
         const f32 bx = from.x - pos.x;
         const f32 bz = from.z - pos.z;
         const f32 blen = std::sqrt(bx * bx + bz * bz);
@@ -522,7 +523,11 @@ void Navigator::drive_spline(Unit& unit, f32 max_speed, f64 dt, const map::Terra
     }
     unit.set_position(pos);
     unit.set_orientation(facing);
-    unit.set_motion_velocity({pos.x - from.x, pos.y - from.y, pos.z - from.z});
+    // Its step from mPos to the node, the node's own height and all (CalcMoveCommon).
+    const Vector3& was = unit.motion_pos();
+    unit.set_motion_velocity(
+        {node->position.x - was.x, node->position.y - was.y, node->position.z - was.z});
+    unit.set_motion_pos(node->position);
     // Its speed along its heading; it is stopping within a second's run of its target
     // (CUnitMotion::ProcessCommonMotionState).
     const f32 speed = ((pos.x - from.x) * osc::dmath::sin(heading) +

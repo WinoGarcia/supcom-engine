@@ -518,6 +518,8 @@ public:
     /// mVelocity: its step last tick, as its motion keeps it.
     const Vector3& motion_velocity() const { return motion_velocity_; }
     void set_motion_velocity(const Vector3& v) { motion_velocity_ = v; }
+    const Vector3& motion_pos() const { return motion_pos_; }
+    void set_motion_pos(const Vector3& p) { motion_pos_ = p; }
     /// mIsBeingPushed: knocked off its spline, it coasts till slow.
     bool pushed() const { return pushed_; }
     void set_pushed(bool p) { pushed_ = p; }
@@ -1999,7 +2001,10 @@ private:
     // a transport picks up its largest units first.
     f32 size_x_ = 1.0f, size_y_ = 1.0f, size_z_ = 1.0f;
     f32 average_density_ = 0.49f;
-    Vector3 motion_velocity_{};        ///< CUnitMotion's mVelocity, a tick's step
+    Vector3 motion_velocity_{}; ///< CUnitMotion's mVelocity, a tick's step
+    /// CUnitMotion's mPos: the node it last stood on, or where it coasted to, before the
+    /// ground snap; a node's velocity is the step from it.
+    Vector3 motion_pos_{};
     bool pushed_ = false;              ///< mIsBeingPushed
     bool in_state_transition_ = false; ///< mInStateTransition
     bool surface_collision_ = true;    ///< mProcessSurfaceCollision; a new CUnitMotion's is set

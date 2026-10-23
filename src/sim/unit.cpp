@@ -1227,6 +1227,7 @@ bool Unit::motion_tick(f64 dt, SimContext& ctx) {
             set_orientation(facing);
             ground_speed_ = 0;
             motion_velocity_ = {};
+            motion_pos_ = was;
             const f32 len = std::sqrt(back.x * back.x + back.z * back.z);
             if (!pushed_ && len > 0) {
                 const f32 scale = nav_speed() * 0.010000001f / len;
@@ -2866,6 +2867,7 @@ void Unit::warp(const map::Terrain* terrain, const Vector3& at) {
         }
     }
     set_position(p);
+    motion_pos_ = p;
     note_snap(); // a jump, not drawn sliding there
     place_now();
     // CUnitMotion::Warp advances its coords twice: no velocity is left to coast on.
@@ -3296,6 +3298,7 @@ void Unit::coast_moho(const map::Terrain* terrain) {
     Vector3 v = motion_velocity_;
     if (v.x * v.x + v.y * v.y + v.z * v.z < 0.000001f && !turned_in_place_) {
         motion_velocity_ = {};
+        motion_pos_ = pending_position();
         ground_speed_ = 0;
         // Still, it is snapped to the ground only when its motion asks (CalcMoveLand:
         // mProcessSurfaceCollision, set as it is made and as it is pushed).
@@ -3318,6 +3321,7 @@ void Unit::coast_moho(const map::Terrain* terrain) {
     Vector3 p = pending_position();
     p.x += v.x;
     p.z += v.z;
+    motion_pos_ = {p.x, p.y + v.y, p.z}; // where it coasted to, before the ground snap
     const f32 heading = quat_yaw(pending_orientation());
     ground_speed_ = (v.x * osc::dmath::sin(heading) + v.z * osc::dmath::cos(heading)) * 10.0f;
     if (terrain) {
