@@ -1058,7 +1058,7 @@ void Unit::take_step(f64 dt, SimContext& ctx) {
         return;
     }
     if (goes_on && ctx.sim) {
-        tick_hover(ctx.terrain, ctx.sim->tick_count(), ctx.sim->random());
+        tick_hover(ctx.terrain, ctx.sim->tick_count(), ctx.sim->random(), ctx.sim->moho_pathing());
     }
     if (snap_serial() == snaps) {
         const Vector3& to = pending_position();
@@ -1238,8 +1238,9 @@ bool Unit::motion_tick(f64 dt, SimContext& ctx) {
     surface_collision_ = false; // CalcMoveLand has met what it touched
     // Moho's motion task ends a ground unit's tick in MoveTo, which normalizes its
     // orientation, standing or not (CUnitMotion::MoveTo, 0x006B92E0).
+    // (A hover's comes after its hover tick, which tilts it.)
     if (ctx.sim && ctx.sim->moho_pathing() && is_mobile() && !can_fly() && !immobile() &&
-        parent_entity_id() == 0 && !crashing_)
+        parent_entity_id() == 0 && !crashing_ && !is_hover())
         set_orientation(quat_normalized_moho(pending_orientation()));
 
     // A sub dives or surfaces, moving or not (M206o).
@@ -3534,7 +3535,7 @@ void limit_length(Vector3& v, f32 max_length) {
 
 } // namespace
 
-void Unit::tick_hover(const map::Terrain* terrain, u32 tick, SimRandom& random) {
+void Unit::tick_hover(const map::Terrain* terrain, u32 tick, SimRandom& random, bool moho) {
     if (!is_hover() || can_fly() || is_being_built_ || dying_ || immobile_ || is_stunned() ||
         parent_entity_id() != 0) {
         return;
@@ -3569,8 +3570,10 @@ void Unit::tick_hover(const map::Terrain* terrain, u32 tick, SimRandom& random) 
     wobble_offset_.z = wobble_offset_.z * 0.98f + wobble_velocity_.z;
 
     if (terrain && !teleporting_) {
-        stand_on_ground(terrain, pending_position(), pending_orientation());
+        // With Moho pathing the tilt is left for MoveTo to normalize, once, after it.
+        stand_on_ground(terrain, pending_position(), pending_orientation(), !moho);
     }
+    if (moho) set_orientation(quat_normalized_moho(pending_orientation()));
 }
 
 void Unit::stand_on_ground(const map::Terrain* terrain, Vector3 at, const Quaternion& facing,

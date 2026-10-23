@@ -1088,7 +1088,7 @@ public:
     void set_hover_physics(const HoverPhysics& h) { hover_physics_ = h; }
     /// Moho's CUnitMotion::CalcMoveHover after its move: the lean into its
     /// acceleration and the wobble, then the snap.
-    void tick_hover(const map::Terrain* terrain, u32 tick, SimRandom& random);
+    void tick_hover(const map::Terrain* terrain, u32 tick, SimRandom& random, bool moho = false);
     const Vector3& hover_tilt() const { return hover_tilt_; }
     const Vector3& wobble_offset() const { return wobble_offset_; }
     /// Physics.RaisedPlatforms: quads of four (x, z, height) corners.
