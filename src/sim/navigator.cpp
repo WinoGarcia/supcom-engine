@@ -454,8 +454,12 @@ void Navigator::spline_generate(const Unit& unit, const Vector3& to, path::PathT
         world.wont_fit = [&](f32 x, f32 z) {
             return sim_->footprint_fits_at(unit.footprint(), x, z) == 0;
         };
+        // A unit that turns wider than it turns fast brakes for one standing where it
+        // would go (Generate's PPS_7: UnitIsBlockedAt, mode 2).
+        world.blocked = [&](f32 x, f32 z) {
+            return sim_->unit_blockers().unit_blocked_at(unit.entity_id(), x, z, 2);
+        };
     }
-    // shortcut: UnitIsBlockedAt (units standing where a wide unit would turn) is left out.
     spline_.generate(spline_unit(unit), spline_pose(unit), to, type, carry_on, unit_at(unit, to),
                      world);
     has_spline_ = true;
