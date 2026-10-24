@@ -865,6 +865,17 @@ void steer_units(SimState& sim, const std::vector<u32>& ids) {
             if (steers(u)) steer_moho(sim, u);
             continue;
         }
+        // Moho's steering ticks every unit, a still one too (CAiSteeringImpl::OnTick): one
+        // pushed settles once slower than a hundredth of its top speed a tick
+        // (ProcessSplineMovement), and meets what it runs into again.
+        if (sim.moho_pathing() && steers(u) && u.pushed()) {
+            const Vector3& v = u.motion_velocity();
+            if (u.max_speed() * 0.01f > std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z)) {
+                u.set_pushed(false);
+                u.set_in_state_transition(false);
+            }
+            continue;
+        }
         if (!steers(u) || !nav.is_moving() || nav.holding() || nav.sidestepping()) continue;
         if (nav.has_collision() && now >= nav.collision().tick) resolve(sim, u, now, cache);
         else if (now >= nav.next_check()) check(sim, u, now, cache);
