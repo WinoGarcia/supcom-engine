@@ -102,3 +102,21 @@ Only unit 5's checks can record it, and with the engine's positions and `UnitsWi
 finds one. `SetWaypoints(0)` (0x005D29C0) brakes a unit still on its spline on a fresh one
 (`Update(3)`) and checks its meetings, but retail's unit 5 then coasts (its steps 0.130, 0.069, 0.021
 are `CalcMoveCommon`'s coast, not the spline's braking), so the engine still drops the spline there.
+
+## 5. Moho's entity ids
+
+Moho reads an entity id's value: its path navigator looks ahead on the tick its unit's id matches
+mod 7, a unit meets props on the tick that matches its id mod 5, a crashing flier's spin comes from
+its id mod 100. With the engine's one count, six Strikers sent to one point repathed 4 ticks after
+retail's. So the engine numbers entities as Moho does, from a pool per family and source (FR
+`EntityDB::DoReserveId`, 0x00684480). The family and source sit in the high bits: a unit
+`army << 20`, a projectile `(army | 0x100) << 20`, a prop `0x2FF << 20`, a shield
+`(army | 0x400) << 20`, a script's entity `(army | 0x500) << 20`, army 255 for none. The pool's next
+serial sits below them.
+
+- **EN's id is Moho's plus one**, so 0 stays "none". `EntityRegistry::moho_id` gives Moho's.
+- **Walks:** entities are walked in the order they were made. The world snapshot sorts them by id
+  before it fills its records, for its binary search.
+- **shortcut:** Moho reuses a released serial, the least first. EN's serials only grow: its orders,
+  weapons and steering keep bare ids where Moho keeps weak pointers, and a reused id would retarget
+  them. This stays until those carry a generation.
