@@ -411,6 +411,9 @@ path::Pose spline_pose(const Unit& unit) {
     const Quaternion& q = unit.orientation();
     const Vector3 forward{(q.w * q.y + q.z * q.x) * 2.0f, (q.z * q.y - q.w * q.x) * 2.0f,
                           1.0f - (q.y * q.y + q.x * q.x) * 2.0f};
+    // Its velocity a tick, as Unit::GetVelocity (0x006A9C90) gives it: off the ground, its
+    // motion's own (CUnitMotion's mVelocity), not the step between its last two places.
+    if (unit.layer() != "Air") return {unit.position(), forward, unit.motion_velocity()};
     const Vector3& v = unit.velocity();
     constexpr f32 kTick = 0.1f;
     return {unit.position(), forward, {v.x * kTick, v.y * kTick, v.z * kTick}};

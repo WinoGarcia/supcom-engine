@@ -9415,7 +9415,10 @@ void test_steer(TestContext& ctx) {
     {
         const float r = reach("__osc_east", "__osc_north");
         const Watch w = watch("__osc_east", "__osc_north", 300, true, false);
-        check((w.held[0] || w.held[1]) && w.closest >= 0.9f * r && w.arrived[0] && w.arrived[1],
+        // Retail's Strikers come within 0.803 of a reach of 0.90 at this crossing (cone
+        // probe, cross90a), and Moho's pathing matches that.
+        check((w.held[0] || w.held[1]) && w.closest >= (moho ? 0.85f : 0.9f) * r && w.arrived[0] &&
+                  w.arrived[1],
               fmt::format("Test 2: crossing, one stops for the other (held {} {}, closest {:.2f} "
                           "of {:.2f})",
                           w.held[0], w.held[1], w.closest, r));
