@@ -344,6 +344,10 @@ void Navigator::navigate(Unit& unit) {
             through_target_ = moho_.cell_in_goal(target) ? speed_through_goal_
                                                          : status_ != Status::WaitingForPath &&
                                                                moho_.last_node_index() < 0;
+        } else {
+            // At it, the steering still takes it for its destination (mDestination), what a
+            // path asked afresh after a push makes for.
+            set_steer_destination(Vector3{moho_.target_x(), pos.y, moho_.target_z()});
         }
     }
     status_ = st == State::HasPath ? Status::Moving : Status::WaitingForPath;
