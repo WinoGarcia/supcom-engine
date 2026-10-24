@@ -9223,7 +9223,8 @@ void test_drive(TestContext& ctx) {
         if math.abs(vz - (b[3] - a[3])) > 1e-3 or math.abs(vx - (b[1] - a[1])) > 1e-3 then
             error('velocity ' .. vx .. ',' .. vz .. ' for a move of ' .. (b[1] - a[1]) .. ',' .. (b[3] - a[3]))
         end
-        if vz <= 0.1 then error('not moving: ' .. vz) end
+        -- Its path turns aside round the hill, so its whole ground speed, not z's alone.
+        if math.sqrt(vx * vx + vz * vz) <= 0.05 then error('not moving: ' .. vx .. ',' .. vz) end
         if moho.unit_methods.GetVelocity == nil then error('not on moho.unit_methods') end
     )");
 

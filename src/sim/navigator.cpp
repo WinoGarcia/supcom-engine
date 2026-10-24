@@ -338,7 +338,12 @@ void Navigator::navigate(Unit& unit) {
             waypoints_.assign(1, Vector3{moho_.target_x(), pos.y, moho_.target_z()});
             waypoint_index_ = 0;
             sidestep_ = false;
-            through_target_ = !moho_.cell_in_goal(target);
+            // UseTopSpeed(IsCellInGoal) picks the flag GetVal reads: in the goal, the
+            // order's speed through it (CalcAtTopSpeed1); short of it, none left of its
+            // path and not thinking (CalcAtTopSpeed2). CAiNavigatorLand::Execute, 0x005A4280.
+            through_target_ = moho_.cell_in_goal(target) ? speed_through_goal_
+                                                         : status_ != Status::WaitingForPath &&
+                                                               moho_.last_node_index() < 0;
         }
     }
     status_ = st == State::HasPath ? Status::Moving : Status::WaitingForPath;
