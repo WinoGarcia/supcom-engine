@@ -26,6 +26,8 @@
 #include "sim/anim_cache.hpp"
 #include "sim/bone_cache.hpp"
 #include "sim/pose.hpp"
+#include "sim/path_clusters.hpp"
+#include "sim/path_tables.hpp"
 #include "sim/projectile.hpp"
 #include "sim/script_class.hpp"
 #include "sim/weapon.hpp"
@@ -6466,6 +6468,43 @@ void test_prop(TestContext& ctx) {
         if none ~= nil then error('an empty rect gave ' .. tostring(none)) end
         rock:Destroy()
     )");
+    // A tree, worth reclaiming but taking no cells (no OccupancyCaps), still dirties the path
+    // clusters under it as it is made, and as it goes where it stands then (Moho's Prop:
+    // ExecuteOccupy; ~Prop's ReleaseOccupy, from its transform).
+    if (auto* tables = ctx.sim.path_tables(); tables && tables->size() > 0) {
+        const auto* acu = ctx.sim.entity_registry().find(army_acu_id(ctx.sim, 0));
+        const auto cluster = [](f32 v) { return static_cast<osc::i32>(v) >> 3; };
+        const osc::i32 cx = acu ? cluster(acu->position().x) : 0;
+        const osc::i32 cz = acu ? cluster(acu->position().z) + 2 : 0;
+        const f32 x = static_cast<f32>(cx * 8) + 4.5f;
+        const f32 z = static_cast<f32>(cz * 8) + 4.5f;
+        const auto& map = tables->map(0);
+        tables->update_background(INT_MAX);
+        const bool clean = !map.dirty(1, cx, cz);
+        (void)ctx.lua_state.do_string(fmt::format(
+            "__osc_dirty_tree = CreatePropHPR('/env/evergreen/props/trees/brch01_prop.bp', {0}, "
+            "GetTerrainHeight({0}, {1}), {1}, 0, 0, 0)",
+            x, z));
+        const bool made = map.dirty(1, cx, cz);
+        tables->update_background(INT_MAX);
+        (void)ctx.lua_state.do_string(fmt::format(
+            "__osc_dirty_tree:SetPosition(Vector({0}, GetTerrainHeight({0}, {1}), {1}), true) "
+            "__osc_dirty_tree:Destroy()",
+            x + 8.0f, z));
+        ctx.sim.tick();
+        const bool gone = map.dirty(1, cx + 1, cz) && !map.dirty(1, cx, cz);
+        if (acu && clean && made && gone) {
+            pass++;
+            spdlog::info("[PASS] Test 10b2: a tree dirties the clusters it is made on, and goes "
+                         "dirtying those where it stands");
+        } else {
+            fail++;
+            osc::test_status::fail(
+                "[FAIL] Test 10b2: a tree's clusters: clean {}, made {}, gone {}", clean, made,
+                gone);
+        }
+    }
+
     // Moho's order, as the original game gives it (probed 2026-10-13): a
     // cell's units the last linked first, so the last made, and one that
     // left and came back first again.
