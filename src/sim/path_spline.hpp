@@ -6,6 +6,10 @@
 #include <functional>
 #include <vector>
 
+namespace osc::sim {
+struct StateIO;
+}
+
 namespace osc::sim::path {
 
 /// Moho's spline point states (faf-re CAiPathSpline.h EPathPointState).
@@ -82,7 +86,7 @@ struct SplineWorld {
 /// generated from its pose toward a destination (Generate, 0x005B2FF0), and
 /// followed a node a tick (CAiSteeringImpl's UpdateMotionPathPointers).
 class Spline {
-    friend struct StateIO; // snapshots (state_io.hpp)
+    friend struct osc::sim::StateIO; // snapshots (state_io.hpp)
 public:
     /// Generate. `carry_on` starts it from the last spline's continuation, in its
     /// state (Moho's allowContinuation false); else it starts from `pose`, its
